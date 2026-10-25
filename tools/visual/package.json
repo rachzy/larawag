@@ -4,7 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "compare": "vitest run --config vitest.config.ts"
+    "compare": "vitest run --config vitest.config.ts compare.spec.ts",
+    "lifecycle": "vitest run --config vitest.config.ts lifecycle.spec.ts"
   },
   "devDependencies": {
     "@larawag/core": "workspace:*",

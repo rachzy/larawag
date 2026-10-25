@@ -12,10 +12,10 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import pixelmatch from 'pixelmatch';
-import { chromium, type Browser } from 'playwright';
+import type { Browser } from 'playwright';
 import { PNG } from 'pngjs';
-import { createServer, type ViteDevServer } from 'vite';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { startHarness, type Harness } from './harness';
 
 const W = 960;
 const H = 540;
@@ -26,24 +26,18 @@ const OUT = fileURLToPath(new URL('./out/', import.meta.url));
 type ViewName = 'home' | 'transit' | 'true';
 type PageName = 'reference' | 'library';
 
-let server: ViteDevServer;
+let harness: Harness;
 let browser: Browser;
 let base: string;
 
 beforeAll(async () => {
   mkdirSync(OUT, { recursive: true });
-  server = await createServer({ configFile: fileURLToPath(new URL('./vite.config.ts', import.meta.url)) });
-  await server.listen(0);
-  base = server.resolvedUrls!.local[0]!;
-  browser = await chromium.launch({
-    executablePath: '/opt/pw-browsers/chromium',
-    args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'],
-  });
+  harness = await startHarness();
+  ({ browser, base } = harness);
 });
 
 afterAll(async () => {
-  await browser?.close();
-  await server?.close();
+  await harness?.close();
 });
 
 /** Loads one harness page, switches to the view, waits for rendered frames and returns the canvas PNG. */
