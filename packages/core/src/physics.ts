@@ -4,3 +4,5 @@ export * from './physics/validate.js';
 export * from './physics/kepler.js';
 export * from './physics/classify.js';
 export * from './physics/colour.js';
+export * from './physics/habitable-zone.js';
+export * from './physics/derive.js';
