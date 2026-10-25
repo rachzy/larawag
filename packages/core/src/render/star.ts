@@ -66,6 +66,8 @@ export function createStar(colour: [number, number, number]): StarPiece {
       material.dispose();
       map.dispose();
       glowMaterial.dispose();
+      // three shares one geometry between all sprites; this frees its GPU buffers (re-uploaded on next use).
+      glow.geometry.dispose();
     },
   };
 }
