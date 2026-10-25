@@ -43,7 +43,7 @@ Units: star in solar units (Teff in K, radius in R☉, mass in M☉); planets in
 | `planet.period` or `planet.a` | One is required. Days or AU. With only `a`, the period is derived. With both, both are used as given. |
 | `planet.phase` | Radians, default 0. |
 | `planet.albedo` | Bond albedo for the equilibrium temperature, default 0.3. |
-| `name`, `planet.seed` | Optional. Unnamed planets are labelled b, c, d… The seed fixes the texture; the default is `11 + 5 × index`. |
+| `name`, `planet.seed` | Optional. Unnamed planets are labelled b, c, d… up to z, then `planet 26`, `planet 27`… The seed fixes the texture; the default is `11 + 5 × index`. |
 
 Every derived value can be overridden, and an override is never recomputed: `star.luminosity`, `star.habitableZone` (`{ inner, outer }` in AU), and per planet `aOverRs`, `rpOverRs`, `velocity` (km/s), `insolation`, `teq` and `planetClass`.
 
@@ -65,9 +65,9 @@ The third argument of `createStarSystem` is optional. Every field is optional to
 |---|---|---|---|
 | `scaleMode` | `'compressed' \| 'true'` | `'compressed'` | Compressed fits close and wide orbits in one view; true draws the real size ratios. |
 | `showHabitableZone` | `boolean` | `true` | Draws the translucent habitable-zone band. |
-| `rate` | `number` | `1.58` | Simulated days per second. |
+| `rate` | `number` | `10 ** 0.2` (about 1.58) | Simulated days per second. |
 | `autoplay` | `boolean` | `true` | Starts the clock running. Starts paused when the user prefers reduced motion. |
-| `minPlanetPixels` | `number` | `0` | At true scale, raises a planet's marker to at least this many pixels. `0` turns it off. |
+| `minPlanetPixels` | `number` | `0` | True scale only. Minimum on-screen diameter of a planet in pixels; smaller planets are drawn larger. `0` turns it off. |
 | `overlays.labels` | `boolean` | `true` | Planet labels projected over the canvas. |
 | `overlays.clock` | `boolean \| { format }` | `true` | Simulated-time readout. `format` is `(days: number) => string`. |
 | `overlays.badge` | `boolean \| { text }` | `true` | The "Hypothetical · artist's impression" badge. `text` replaces its wording. |
@@ -79,7 +79,7 @@ This is the default options:
 createStarSystem(container, input, {
   scaleMode: 'compressed',
   showHabitableZone: true,
-  rate: 1.58,
+  rate: 10 ** 0.2,
   autoplay: true,
   minPlanetPixels: 0,
   overlays: {
@@ -91,7 +91,7 @@ createStarSystem(container, input, {
 });
 ```
 
-**Scale modes.** Compressed (default) keeps the star at 2 scene units and compresses distances so close and wide orbits both fit. True scale draws the real ratios; planets are close to invisible, which is the honest picture.
+**Scale modes.** Compressed (default) draws the star with a radius of 2 scene units and compresses distances so close and wide orbits both fit. True scale draws the real ratios; planets are close to invisible, which is the honest picture.
 
 ## View methods
 
@@ -114,9 +114,9 @@ createStarSystem(container, input, {
 | `destroy()` | Releases everything (see below). Safe to call twice. |
 | `system` | Read-only. The derived values for the current system. |
 
-`setSystem` validates first. On an error it throws and the old system keeps running. On success it rebuilds the scene and keeps the camera, scale mode, play state, rate and simulated time.
+`setSystem` validates first. On an error it throws and the old system keeps running. On success it rebuilds the scene and keeps the camera, scale mode, play state, rate and simulated time, except that the camera goes back to the home view when the new system's outer orbit changes how far the camera must sit.
 
-`destroy()` stops the loop, disposes geometries, materials, textures and the renderer, removes listeners, labels and the injected style, and can be called twice. If WebGL fails to start, `createStarSystem` shows `fallbackText` and returns a view whose methods do nothing.
+`destroy()` stops the loop, disposes geometries, materials, textures and the renderer, removes listeners, labels and the injected style, and can be called twice. If WebGL fails to start, `createStarSystem` shows `fallbackText` and returns a view whose methods do nothing (`setSystem` still validates and updates `system`).
 
 ## Styling the overlays
 
@@ -125,9 +125,12 @@ Only the text overlays can be restyled; the 3D scene is fixed. Set these CSS var
 | Variable | Default |
 |---|---|
 | `--larawag-font` | `"IBM Plex Mono", ui-monospace, monospace` |
-| `--larawag-label-color`, `--larawag-label-bg`, `--larawag-label-border` | as in the preview |
-| `--larawag-clock-color` | as in the preview |
-| `--larawag-badge-color`, `--larawag-badge-bg` | as in the preview |
+| `--larawag-label-color` | `#e6e9f5` |
+| `--larawag-label-bg` | `rgba(7,10,20,.65)` |
+| `--larawag-label-border` | `#232a47` |
+| `--larawag-clock-color` | `#8e97b8` (also colours the fallback text) |
+| `--larawag-badge-color` | `#e8b04a` (also the badge border) |
+| `--larawag-badge-bg` | `rgba(7,10,20,.65)` |
 
 Larawag does not load fonts.
 
@@ -155,7 +158,7 @@ pnpm test:visual                          # screenshots against the original pro
 
 - Tested headless (SwiftShader) first; check a real GPU, touch controls and small viewports before relying on it.
 - Planet markers at true scale can be smaller than a pixel.
-- In transit view, labels are spread out vertically to avoid overlap, but crowded systems can still be busy.
+- Labels are spread out vertically to avoid overlap in every view, but crowded systems can still be busy.
 
 ## TO-DO
 
