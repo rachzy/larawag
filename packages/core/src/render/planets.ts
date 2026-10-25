@@ -14,15 +14,29 @@ export function planetEmissiveIntensity(teq: number): number {
   return teq > 700 ? Math.min(0.25, (teq - 700) / 2500) : 0;
 }
 
-/** r186's physical lighting chunk with the r128 diffuse and specular terms put back. */
-export function r128LightsChunk(): string {
-  return ShaderChunk.lights_physical_pars_fragment
-    .replace('irradiance * specularBRDF * material.multiScatteringCompensation', 'irradiance * specularBRDF')
-    .replace('BRDF_Lambert( material.diffuseContribution ) * ( 1.0 - F )', 'BRDF_Lambert( material.diffuseContribution )')
-    .replace(
-      'BRDF_Lambert( material.diffuseContribution ) * ( 1.0 - singleScattering - multiScattering )',
-      'BRDF_Lambert( material.diffuseContribution )',
-    );
+/** r186 terms that r128 did not have, each with its r128 replacement. */
+const R128_PATCHES: [string, string][] = [
+  ['irradiance * specularBRDF * material.multiScatteringCompensation', 'irradiance * specularBRDF'],
+  ['BRDF_Lambert( material.diffuseContribution ) * ( 1.0 - F )', 'BRDF_Lambert( material.diffuseContribution )'],
+  [
+    'BRDF_Lambert( material.diffuseContribution ) * ( 1.0 - singleScattering - multiScattering )',
+    'BRDF_Lambert( material.diffuseContribution )',
+  ],
+];
+
+const LIGHTS_INCLUDE = '#include <lights_physical_pars_fragment>';
+
+/**
+ * r186's physical lighting chunk with the r128 diffuse and specular terms put
+ * back. Throws when a term is missing, so a three update cannot silently
+ * bring back r186 shading.
+ */
+export function r128LightsChunk(chunk: string = ShaderChunk.lights_physical_pars_fragment): string {
+  for (const [needle, replacement] of R128_PATCHES) {
+    if (!chunk.includes(needle)) throw new Error(`larawag: r128 shading patch target not found: "${needle}"`);
+    chunk = chunk.replace(needle, replacement);
+  }
+  return chunk;
 }
 
 /** Builds a textured unit-radius planet sphere. Needs a DOM canvas. */
@@ -35,7 +49,10 @@ export function createPlanet(p: DerivedPlanet): PlanetPiece {
   }
   if (RENDER_TUNABLES.r128PlanetBrdf) {
     material.onBeforeCompile = (shader) => {
-      shader.fragmentShader = shader.fragmentShader.replace('#include <lights_physical_pars_fragment>', r128LightsChunk());
+      if (!shader.fragmentShader.includes(LIGHTS_INCLUDE)) {
+        throw new Error(`larawag: r128 shading patch target not found: "${LIGHTS_INCLUDE}"`);
+      }
+      shader.fragmentShader = shader.fragmentShader.replace(LIGHTS_INCLUDE, r128LightsChunk());
     };
   }
   const geometry = new SphereGeometry(1, 40, 28);

@@ -88,6 +88,17 @@ function compare(a: PNG, b: PNG, diffFile?: string): number {
 
 const VIEWS: ViewName[] = ['home', 'transit', 'true'];
 
+/** Pixels with R+G+B above 384; the real references have 4624 (home), 2603 (transit) and 310 (true). */
+function brightPixels(png: PNG): number {
+  let n = 0;
+  for (let i = 0; i < png.data.length; i += 4) if (png.data[i]! + png.data[i + 1]! + png.data[i + 2]! > 384) n++;
+  return n;
+}
+
+// Non-blank guard: about a third of the measured bright pixels, so a black or empty canvas cannot pass.
+const MIN_BRIGHT: Record<ViewName, number> = { home: 1500, transit: 800, true: 100 };
+const references = new Map<ViewName, PNG>();
+
 describe('noise floor', () => {
   it.each(VIEWS)('%s: same page rendered twice', async (view) => {
     const r = compare(await shoot('reference', view), await shoot('reference', view));
@@ -104,8 +115,18 @@ describe('prototype parity', () => {
     const lib = await shoot('library', view);
     writeFileSync(`${OUT}${view}-reference.png`, PNG.sync.write(ref));
     writeFileSync(`${OUT}${view}-library.png`, PNG.sync.write(lib));
+    references.set(view, ref);
+    expect(brightPixels(ref)).toBeGreaterThanOrEqual(MIN_BRIGHT[view]);
+    expect(brightPixels(lib)).toBeGreaterThanOrEqual(MIN_BRIGHT[view]);
     const ratio = compare(ref, lib, `${view}-diff.png`);
     console.log(`parity ${view}: ${ratio}`);
     expect(ratio).toBeLessThanOrEqual(MAX_RATIO);
+  });
+
+  it('home and transit screenshots differ (the view switch took effect)', () => {
+    const home = references.get('home');
+    const transit = references.get('transit');
+    expect(home && transit).toBeTruthy();
+    expect(compare(home!, transit!)).toBeGreaterThan(0.01);
   });
 });

@@ -24,6 +24,7 @@ export const RENDER_TUNABLES = {
    * diffuse light and adds multi-scattering to the specular, which darkens
    * the lit side of the planets by about 3-4%.
    */
+  // Depends on the exact shader text of three 0.186.x; createPlanet throws if it changes.
   r128PlanetBrdf: true,
 } as const;
 

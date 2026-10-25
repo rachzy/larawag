@@ -89,12 +89,26 @@ describe('planetEmissiveIntensity', () => {
 });
 
 describe('r128LightsChunk', () => {
-  it("removes all three r186 energy terms from three's lighting chunk", () => {
+  const needles = [
+    'irradiance * specularBRDF * material.multiScatteringCompensation',
+    'BRDF_Lambert( material.diffuseContribution ) * ( 1.0 - F )',
+    'BRDF_Lambert( material.diffuseContribution ) * ( 1.0 - singleScattering - multiScattering )',
+  ];
+  const original = ShaderChunk.lights_physical_pars_fragment;
+
+  it("finds all three r186 terms in three's lighting chunk", () => {
+    for (const n of needles) expect(original).toContain(n);
+  });
+
+  it('removes all three terms', () => {
     const chunk = r128LightsChunk();
-    expect(chunk).not.toBe(ShaderChunk.lights_physical_pars_fragment);
-    expect(chunk).not.toContain('* material.multiScatteringCompensation');
-    expect(chunk).not.toContain('* ( 1.0 - F )');
-    expect(chunk).not.toContain('* ( 1.0 - singleScattering - multiScattering )');
+    expect(chunk).not.toBe(original);
+    for (const n of needles) expect(chunk).not.toContain(n);
+  });
+
+  it.each(needles)('throws naming the missing term: %s', (needle) => {
+    const mutated = original.replace(needle, '/* renamed */');
+    expect(() => r128LightsChunk(mutated)).toThrow(needle);
   });
 });
 
