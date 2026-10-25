@@ -10,3 +10,4 @@ export * from './camera.js';
 export * from './labels.js';
 export * from './overlays.js';
 export * from './styles.js';
+export * from './scene-assembly.js';
