@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "declaration": false,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["vite/client"],
+    "paths": {
+      "@larawag/core": ["../../packages/core/src/index.ts"],
+      "@larawag/core/physics": ["../../packages/core/src/physics.ts"]
+    }
+  },
+  "include": ["main.ts", "systems.ts"]
+}

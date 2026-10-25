@@ -8,6 +8,25 @@ importers:
 
   .: {}
 
+  examples/vanilla:
+    dependencies:
+      three:
+        specifier: 0.186.1
+        version: 0.186.1
+    devDependencies:
+      '@larawag/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@types/three':
+        specifier: 0.186.0
+        version: 0.186.0
+      typescript:
+        specifier: 7.0.2
+        version: 7.0.2
+      vite:
+        specifier: ^8.3.5
+        version: 8.3.5
+
   packages/core:
     devDependencies:
       '@types/three':

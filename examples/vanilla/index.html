@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Larawag demo</title>
+<style>
+/* Deliberately dark-only: it is a night-sky scene. */
+:root{
+  --bg:#070a14; --fg:#e6e9f5; --muted:#8e97b8; --line:#232a47; --panel:#0e1226;
+  --accent:#f0a64a; --good:#58c68a; --warn:#e8b04a; --bad:#ff8a80;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:14px;line-height:1.5;
+  padding-block:24px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+main{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1{font-size:22px;margin:0;font-weight:600}
+h2{font-size:15px;margin:0;font-weight:600}
+p{margin:0}
+.sub{color:var(--muted);max-width:70ch}
+#stage{position:relative;height:min(62vh,560px);min-height:320px;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:#04060d}
+.ctl{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center}
+.ctl label{display:flex;gap:8px;align-items:center;color:var(--muted)}
+button,select,input{font:inherit;color:var(--fg)}
+button{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:5px 12px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+select,input[type=text],input[type=number]{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:4px 8px;min-width:0}
+input[type=range]{width:150px;accent-color:var(--accent)}
+.note{color:var(--muted);font-size:12.5px;max-width:80ch}
+.mono{font-family:var(--mono)}
+fieldset{border:1px solid var(--line);border-radius:6px;padding:12px 14px;margin:0;min-width:0}
+legend{padding:0 6px;font-weight:600}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;align-items:end}
+.row label{display:flex;flex-direction:column;gap:2px;color:var(--muted);font-size:12.5px;min-width:0}
+.row label input,.row label select{width:100%}
+.pair{display:flex;gap:4px}
+.pair input{flex:1 1 0;min-width:0}
+.row .pair input{width:auto}
+.row .pair select{flex:none;width:auto}
+.wide{grid-column:span 2}
+.planet{border-top:1px solid var(--line);padding-top:10px;margin-top:10px}
+.planet:first-of-type{border-top:0;margin-top:0;padding-top:0}
+.actions{margin-top:10px}
+#errors{margin:0;padding:8px 12px 8px 28px;border:1px solid var(--bad);border-radius:6px;color:var(--bad);font-family:var(--mono);font-size:12.5px}
+#errors:empty{display:none}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px 14px;min-width:0}
+.card h3{font-size:15px;margin:0 0 2px;font-weight:600;display:flex;align-items:center;gap:8px}
+.dot{width:10px;height:10px;border-radius:50%;flex:none}
+.card .kind{color:var(--muted);margin-bottom:8px;font-size:13px}
+dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:2px 12px;font-size:13px}
+dt{color:var(--muted)} dd{margin:0;font-family:var(--mono);font-size:12.5px;text-align:right;font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Larawag demo</h1>
+    <p class="sub">An editable star system drawn by the Larawag library. Edit the fields below and the scene updates. Drag to rotate, scroll to zoom.</p>
+  </header>
+
+  <div class="ctl">
+    <label for="preset">System <select id="preset"></select></label>
+  </div>
+
+  <div id="stage" role="group" aria-label="3D view of the star system"></div>
+
+  <div class="ctl">
+    <button id="play" type="button" aria-pressed="true">Pause</button>
+    <label for="speed">Speed <input id="speed" type="range" min="-1" max="2" step="0.05" value="0.2"> <span id="speedv" class="note mono"></span></label>
+    <button id="scale" type="button" aria-pressed="false">True scale: off</button>
+    <button id="hz" type="button" aria-pressed="true">Habitable zone: on</button>
+    <button id="transit" type="button">Transit view</button>
+    <button id="reset" type="button">Reset view</button>
+  </div>
+
+  <ul id="errors" role="alert"></ul>
+
+  <form id="form" autocomplete="off" onsubmit="return false">
+    <fieldset>
+      <legend>Star</legend>
+      <div class="row">
+        <label>Name <input id="star-name" type="text"></label>
+        <label>Teff (K) <input id="star-teff" type="number" step="any" inputmode="decimal"></label>
+        <label>Radius (R☉) <input id="star-radius" type="number" step="any" inputmode="decimal"></label>
+        <label>Mass (M☉) <input id="star-mass" type="number" step="any" inputmode="decimal"></label>
+      </div>
+    </fieldset>
+    <fieldset style="margin-top:12px">
+      <legend>Planets</legend>
+      <div id="planets"></div>
+      <div class="actions"><button id="add" type="button">Add planet</button></div>
+    </fieldset>
+  </form>
+
+  <div class="cards" id="cards" aria-live="polite"></div>
+
+  <p class="note">Derived values come from the library: Kepler's third law for orbit size and speed, insolation and equilibrium temperature (Bond albedo 0.3) from the star, and colour from a blackbody at the star's temperature. Distances are compressed unless true scale is on. Planet class is only a guess from size.</p>
+</main>
+<script type="module" src="./main.ts"></script>
+</body>
+</html>
