@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { RingGeometry } from 'three';
+import { RingGeometry, ShaderChunk } from 'three';
 import { createHzMesh } from '../src/render/hz-mesh.js';
 import { createOrbit } from '../src/render/orbits.js';
-import { planetEmissiveIntensity } from '../src/render/planets.js';
+import { planetEmissiveIntensity, r128LightsChunk } from '../src/render/planets.js';
 import { createStarfield } from '../src/render/starfield.js';
 import { rng } from '../src/render/textures.js';
 
@@ -85,6 +85,16 @@ describe('planetEmissiveIntensity', () => {
     expect(planetEmissiveIntensity(558.7)).toBe(0);
     expect(planetEmissiveIntensity(700)).toBe(0);
     expect(planetEmissiveIntensity(5000)).toBe(0.25);
+  });
+});
+
+describe('r128LightsChunk', () => {
+  it("removes all three r186 energy terms from three's lighting chunk", () => {
+    const chunk = r128LightsChunk();
+    expect(chunk).not.toBe(ShaderChunk.lights_physical_pars_fragment);
+    expect(chunk).not.toContain('* material.multiScatteringCompensation');
+    expect(chunk).not.toContain('* ( 1.0 - F )');
+    expect(chunk).not.toContain('* ( 1.0 - singleScattering - multiScattering )');
   });
 });
 

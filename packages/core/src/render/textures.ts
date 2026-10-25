@@ -1,5 +1,6 @@
-import { CanvasTexture, NoColorSpace } from 'three';
+import { CanvasTexture } from 'three';
 import type { PlanetClass } from '../physics/types.js';
+import { RENDER_TUNABLES } from './renderer-setup.js';
 
 /** Seeded PRNG (mulberry32), as in the prototype. */
 export function rng(seed: number): () => number {
@@ -53,8 +54,7 @@ export function planetTexture(kind: PlanetClass, seed: number): CanvasTexture {
     }
   }
   const tex = new CanvasTexture(c);
-  // r128 left canvas textures untagged; with colour management off this matches it.
-  tex.colorSpace = NoColorSpace;
+  tex.colorSpace = RENDER_TUNABLES.textureColorSpace;
   return tex;
 }
 
@@ -71,6 +71,6 @@ export function glowTexture(): CanvasTexture {
   x.fillStyle = g;
   x.fillRect(0, 0, 256, 256);
   const tex = new CanvasTexture(c);
-  tex.colorSpace = NoColorSpace;
+  tex.colorSpace = RENDER_TUNABLES.textureColorSpace;
   return tex;
 }

@@ -10,11 +10,8 @@ import {
   ShaderMaterial,
   SpriteMaterial,
 } from 'three';
+import { RENDER_TUNABLES } from './renderer-setup.js';
 import { glowTexture } from './textures.js';
-
-/** Light intensities, tuned later for r128 parity. */
-export const STAR_LIGHT_INTENSITY = 1.6 * Math.PI;
-export const AMBIENT_INTENSITY = 1.0 * Math.PI;
 
 /** The star mesh, its glow sprite and the scene lights. */
 export interface StarPiece {
@@ -53,8 +50,8 @@ export function createStar(colour: [number, number, number]): StarPiece {
   });
   const glow = new Sprite(glowMaterial);
 
-  const light = new PointLight(starCol, STAR_LIGHT_INTENSITY, 0, 0);
-  const ambient = new AmbientLight(0x1a2038, AMBIENT_INTENSITY);
+  const light = new PointLight(starCol, RENDER_TUNABLES.starLightIntensity, 0, RENDER_TUNABLES.starLightDecay);
+  const ambient = new AmbientLight(0x1a2038, RENDER_TUNABLES.ambientIntensity);
 
   const object = new Group();
   object.add(mesh, glow, light, ambient);
