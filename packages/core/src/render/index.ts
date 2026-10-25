@@ -5,3 +5,8 @@ export * from './textures.js';
 export * from './planets.js';
 export * from './orbits.js';
 export * from './hz-mesh.js';
+export * from './scales.js';
+export * from './camera.js';
+export * from './labels.js';
+export * from './overlays.js';
+export * from './styles.js';
