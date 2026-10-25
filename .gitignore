@@ -1,1 +1,4 @@
 tmp/plans/
+
+dist/
+node_modules/
