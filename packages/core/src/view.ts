@@ -236,6 +236,8 @@ export function createStarSystem(
   let last = performance.now();
   let rafId = 0;
   const frame = (now: number): void => {
+    // Schedule first so an error below can never stop the loop.
+    rafId = requestAnimationFrame(frame);
     const dt = Math.min(0.1, Math.max(0, (now - last) / 1000));
     last = now;
     if (playing) simDays += dt * rate;
@@ -255,10 +257,19 @@ export function createStarSystem(
     });
     labels.update(labelPos, camera, width, height);
     overlays.setTime(simDays);
-    for (const cb of ticks) cb(simDays);
+    for (const cb of ticks) {
+      try {
+        cb(simDays);
+      } catch (e) {
+        // Keep the loop and the other callbacks running; still surface the error to the host.
+        setTimeout(() => {
+          throw e;
+        });
+      }
+    }
+    if (destroyed) return; // a callback may have destroyed the view
     controls.update();
     renderer.render(scene, camera);
-    rafId = requestAnimationFrame(frame);
   };
   rafId = requestAnimationFrame(frame);
 

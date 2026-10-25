@@ -286,6 +286,38 @@ describe('createStarSystem with a renderer', () => {
     expect(cb).toHaveBeenCalledTimes(2);
   });
 
+  it('a throwing onTick callback does not stop the loop, other callbacks, or rendering; the error resurfaces asynchronously', () => {
+    const v = make(fixture, { rate: 1 });
+    const deferred: (() => void)[] = [];
+    const timeout = vi
+      .spyOn(globalThis, 'setTimeout')
+      .mockImplementation(((fn: () => void) => void deferred.push(fn)) as unknown as typeof setTimeout);
+    const boom = new Error('boom');
+    const other = vi.fn();
+    v.onTick(() => {
+      throw boom;
+    });
+    v.onTick(other);
+    step(100);
+    expect(other).toHaveBeenCalledTimes(1);
+    expect(fake!.render).toHaveBeenCalledTimes(1);
+    expect(frames.size).toBe(1);
+    step(200);
+    expect(other).toHaveBeenCalledTimes(2);
+    expect(v.time).toBeGreaterThan(0);
+    expect(deferred).toHaveLength(2);
+    expect(deferred[0]).toThrow(boom);
+    timeout.mockRestore();
+  });
+
+  it('destroying the view from an onTick callback stops the loop without rendering', () => {
+    const v = make();
+    v.onTick(() => v.destroy());
+    step(100);
+    expect(fake!.render).not.toHaveBeenCalled();
+    expect(frames.size).toBe(0);
+  });
+
   it('setScaleMode changes the mode and resets the camera to home', () => {
     const v = make();
     step(16);
