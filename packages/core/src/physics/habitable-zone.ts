@@ -1,4 +1,4 @@
-import { TEFF_SUN } from './constants.js';
+import { starLuminosity } from './kepler.js';
 
 /** Habitable-zone model. Only `'approximate'` is available. */
 export type HzModel = 'approximate';
@@ -12,9 +12,8 @@ const SEFF_OUTER = 0.36;
  */
 export function habitableZone(
   star: { teff: number; radius: number; luminosity?: number },
-  model: HzModel = 'approximate',
+  _model: HzModel = 'approximate',
 ): { inner: number; outer: number } {
-  void model;
-  const lum = star.luminosity ?? star.radius * star.radius * Math.pow(star.teff / TEFF_SUN, 4);
+  const lum = star.luminosity ?? starLuminosity(star.teff, star.radius);
   return { inner: Math.sqrt(lum / SEFF_INNER), outer: Math.sqrt(lum / SEFF_OUTER) };
 }

@@ -25,9 +25,14 @@ export function orbitalSpeedKmS(massSolar: number, aAu: number): number {
   return 29.78 * Math.sqrt(massSolar / aAu);
 }
 
+/** Stellar luminosity in L☉ from Teff (K) and radius (R☉): R² (Teff/5772)⁴. */
+export function starLuminosity(teff: number, radiusSolar: number): number {
+  return radiusSolar * radiusSolar * Math.pow(teff / TEFF_SUN, 4);
+}
+
 /** Stellar flux at the planet relative to Earth's. */
 export function insolation(radiusSolar: number, teff: number, aAu: number): number {
-  return (radiusSolar * radiusSolar * Math.pow(teff / TEFF_SUN, 4)) / (aAu * aAu);
+  return starLuminosity(teff, radiusSolar) / (aAu * aAu);
 }
 
 /** Equilibrium temperature in K for a Bond albedo, full heat redistribution. */

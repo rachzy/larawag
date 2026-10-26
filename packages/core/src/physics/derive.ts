@@ -1,4 +1,4 @@
-import { DEFAULT_ALBEDO, TEFF_SUN } from './constants.js';
+import { DEFAULT_ALBEDO } from './constants.js';
 import { blackbodyColour, colourToCss } from './colour.js';
 import { classifyPlanet } from './classify.js';
 import { habitableZone } from './habitable-zone.js';
@@ -9,6 +9,7 @@ import {
   periodDaysFromAu,
   rpOverRs,
   semiMajorAxisAu,
+  starLuminosity,
 } from './kepler.js';
 import type { PlanetClass, SystemInput } from './types.js';
 import { LarawagValidationError, validateSystem } from './validate.js';
@@ -63,7 +64,7 @@ export function deriveSystem(input: SystemInput): DerivedSystem {
   if (issues.length) throw new LarawagValidationError(issues);
 
   const s = input.star;
-  const luminosity = s.luminosity ?? s.radius * s.radius * Math.pow(s.teff / TEFF_SUN, 4);
+  const luminosity = s.luminosity ?? starLuminosity(s.teff, s.radius);
   const colour = blackbodyColour(s.teff);
 
   const planets = input.planets.map((p, i): DerivedPlanet => {
