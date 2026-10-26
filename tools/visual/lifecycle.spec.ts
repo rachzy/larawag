@@ -187,9 +187,9 @@ const create = (page: Page, input: SystemInput, options?: object): Promise<void>
 const frames = (page: Page, n = 3): Promise<void> =>
   page.evaluate((k) => window.__frames((window as unknown as { v: StarSystemView }).v, k), n);
 
-/** Pixels with R+G+B above 384 inside the stage. */
-async function brightPixels(page: Page): Promise<number> {
-  const png = PNG.sync.read(await page.screenshot({ clip: { x: 0, y: 0, width: 960, height: 540 } }));
+/** Pixels with R+G+B above 384 inside the stage (or inside `clip`). */
+async function brightPixels(page: Page, clip = { x: 0, y: 0, width: 960, height: 540 }): Promise<number> {
+  const png = PNG.sync.read(await page.screenshot({ clip }));
   let n = 0;
   for (let i = 0; i < png.data.length; i += 4) if (png.data[i]! + png.data[i + 1]! + png.data[i + 2]! > 384) n++;
   return n;
@@ -230,6 +230,53 @@ describe('lifecycle', () => {
       expect(after.probe.live).toEqual(expectedLive);
       expect(after.probe.contexts).toBe(21);
       expect(after.probe.lost).toBe(21);
+    });
+  });
+
+  it('two views at once: destroying one leaves the other rendering, then nothing is left', { timeout: TIMEOUT }, async () => {
+    await withSession({}, async ({ page }) => {
+      await page.evaluate(() => window.__lw.bareRenderer());
+      const bare = await page.evaluate(() => window.__probe());
+      await page.evaluate((input) => {
+        const w = window as unknown as { a: StarSystemView; b: StarSystemView };
+        const half = (left: number): HTMLElement => {
+          const el = document.createElement('div');
+          el.style.cssText = `position:absolute;top:0;left:${left}px;width:480px;height:540px`;
+          window.__lw.stage.appendChild(el);
+          return el;
+        };
+        w.a = window.__lw.createStarSystem(half(0), input as never);
+        w.b = window.__lw.createStarSystem(half(480), input as never);
+      }, SYSTEM);
+      await page.evaluate(async () => {
+        const w = window as unknown as { a: StarSystemView; b: StarSystemView };
+        await Promise.all([window.__frames(w.a, 3), window.__frames(w.b, 3)]);
+      });
+      const right = { x: 480, y: 0, width: 480, height: 540 };
+      expect(await brightPixels(page, right)).toBeGreaterThan(300);
+      const r = await page.evaluate(async () => {
+        const w = window as unknown as { a: StarSystemView; b: StarSystemView };
+        w.a.destroy();
+        const t0 = w.b.time;
+        await window.__frames(w.b, 5);
+        return { advanced: w.b.time > t0, canvases: document.querySelectorAll('canvas').length };
+      });
+      expect(r.advanced).toBe(true);
+      expect(r.canvases).toBe(1);
+      expect(await brightPixels(page, right)).toBeGreaterThan(300);
+      await page.evaluate(() => (window as unknown as { b: StarSystemView }).b.destroy());
+      await page.evaluate(() => new Promise<void>((res) => requestAnimationFrame(() => requestAnimationFrame(() => res()))));
+      const after = await page.evaluate(() => ({
+        probe: window.__probe(),
+        larawagNodes: document.querySelectorAll('.larawag, .larawag-label, .larawag-clock, .larawag-badge, canvas').length,
+        styles: document.querySelectorAll('style[data-larawag]').length,
+      }));
+      expect(after.larawagNodes).toBe(0);
+      expect(after.styles).toBe(0);
+      expect(after.probe.pendingRaf).toBe(0);
+      expect(after.probe.live).toEqual(Object.fromEntries(Object.entries(bare.live).map(([k, n]) => [k, n * 3])));
+      expect(after.probe.contexts).toBe(3);
+      expect(after.probe.lost).toBe(3);
     });
   });
 
