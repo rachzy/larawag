@@ -7,13 +7,14 @@ import { planetAngle } from '../src/view.js';
 import type { StarSystemView } from '../src/index.js';
 import { cameraPreset } from '../src/render/camera.js';
 import { createRenderer } from '../src/render/renderer-setup.js';
+import { planetTexture } from '../src/render/textures.js';
 import type { SystemInput } from '../src/physics/types.js';
 import { fixture } from './fixture.js';
 
 // jsdom has no canvas 2D context: textures become plain three Textures.
 vi.mock('../src/render/textures.js', async (importOriginal) => {
   const real = await importOriginal<typeof import('../src/render/textures.js')>();
-  return { ...real, planetTexture: () => new Texture(), glowTexture: () => new Texture() };
+  return { ...real, planetTexture: vi.fn(() => new Texture()), glowTexture: () => new Texture() };
 });
 
 // The real createRenderer by default; tests that need a "working" GL swap in a fake.
@@ -194,6 +195,28 @@ describe('createStarSystem input validation', () => {
 
 describe('createStarSystem with a renderer', () => {
   beforeEach(() => useFakeRenderer());
+
+  it('undoes everything and rethrows when building the scene fails', () => {
+    const boom = new Error('larawag: no 2D canvas context');
+    vi.mocked(planetTexture).mockImplementationOnce(() => {
+      throw boom;
+    });
+    expect(() => make()).toThrow(boom);
+    expect(container.childElementCount).toBe(0);
+    expect(document.querySelector('style[data-larawag]')).toBeNull();
+    expect(fake!.dispose).toHaveBeenCalledOnce();
+    expect(fake!.forceContextLoss).toHaveBeenCalledOnce();
+    expect(frames.size).toBe(0);
+  });
+
+  it('planetTexture throws a clear error without a 2D canvas context', async () => {
+    const real = await vi.importActual<typeof import('../src/render/textures.js')>(
+      '../src/render/textures.js',
+    );
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
+    expect(() => real.planetTexture('rocky', 1)).toThrow(/2D canvas context/);
+    expect(() => real.glowTexture()).toThrow(/2D canvas context/);
+  });
 
   it('builds the wrapper, canvas, labels and overlays', () => {
     make();

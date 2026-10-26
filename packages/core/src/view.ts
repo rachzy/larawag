@@ -159,221 +159,252 @@ export function createStarSystem(
     };
   }
 
-  let playing = options.autoplay ?? !prefersReducedMotion();
-  const scene = new Scene();
-  const camera = new PerspectiveCamera(45, 1, 0.05, 6000);
-  const controls = new OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true;
-  controls.dampingFactor = 0.08;
+  // If anything below throws, undo what was built (newest first) so nothing leaks.
+  const undo: (() => void)[] = [
+    () => {
+      wrapper.remove();
+      releaseStyle();
+    },
+    () => {
+      renderer.dispose();
+      renderer.forceContextLoss();
+    },
+  ];
+  try {
+    let playing = options.autoplay ?? !prefersReducedMotion();
+    const scene = new Scene();
+    const camera = new PerspectiveCamera(45, 1, 0.05, 6000);
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    undo.push(() => controls.dispose());
 
-  let fit = 0;
-  let starfield: StarfieldPiece | null = null;
-  let pieces: SystemScene = buildSystemScene(system, mode, showHz);
-  scene.add(pieces.root);
-  let labels: Labels = createLabels(wrapper, system.planets, { enabled: overlayState.labels });
-  const overlays = createOverlays(wrapper, overlayState);
-  const labelPos: Vector3[] = [];
-  const ticks = new Set<(days: number) => void>();
-  let width = 0;
-  let height = 0;
+    let fit = 0;
+    let starfield: StarfieldPiece | null = null;
+    let pieces: SystemScene = buildSystemScene(system, mode, showHz);
+    undo.push(() => pieces.dispose());
+    scene.add(pieces.root);
+    let labels: Labels = createLabels(wrapper, system.planets, { enabled: overlayState.labels });
+    undo.push(() => labels.dispose());
+    const overlays = createOverlays(wrapper, overlayState);
+    undo.push(() => overlays.dispose());
+    undo.push(() => starfield?.dispose());
+    const labelPos: Vector3[] = [];
+    const ticks = new Set<(days: number) => void>();
+    let width = 0;
+    let height = 0;
 
-  /** Applies the camera fit for the current pieces; returns true when it changed. */
-  const applyFit = (): boolean => {
-    const next = cameraFit(mode, pieces.outerOrbit);
-    if (next === fit) return false;
-    fit = next;
-    camera.far = 6000 * fit;
-    camera.updateProjectionMatrix();
-    controls.minDistance = 3 * fit;
-    controls.maxDistance = 900 * fit;
-    if (starfield) {
-      scene.remove(starfield.points);
-      starfield.dispose();
-    }
-    starfield = createStarfield(2500 * fit);
-    scene.add(starfield.points);
-    return true;
-  };
-
-  const setView = (kind: 'home' | 'transit'): void => {
-    const p = cameraPreset(mode, kind, fit);
-    camera.position.set(p[0], p[1], p[2]);
-    controls.target.set(0, 0, 0);
-    controls.update();
-  };
-
-  const resize = (): void => {
-    const w = wrapper.clientWidth;
-    const h = wrapper.clientHeight;
-    if (!w || !h) return;
-    width = w;
-    height = h;
-    renderer.setSize(w, h, false);
-    camera.aspect = w / h;
-    camera.updateProjectionMatrix();
-  };
-
-  const syncLabelPositions = (): void => {
-    labelPos.length = pieces.bodies.length;
-    for (let i = 0; i < labelPos.length; i++) labelPos[i] ??= new Vector3();
-  };
-
-  applyFit();
-  setView('home');
-  syncLabelPositions();
-
-  let observer: ResizeObserver | null = null;
-  if (typeof ResizeObserver === 'function') {
-    observer = new ResizeObserver(resize);
-    observer.observe(wrapper);
-  } else {
-    window.addEventListener('resize', resize);
-  }
-  resize();
-
-  const tanHalfFov = (): number => Math.tan(((camera.fov * Math.PI) / 180) / 2);
-
-  let last = performance.now();
-  let rafId = 0;
-  let failed = false;
-  const frame = (now: number): void => {
-    if (failed || destroyed) return;
-    // Schedule first so an error below can never stop the loop.
-    rafId = requestAnimationFrame(frame);
-    const dt = Math.min(0.1, Math.max(0, (now - last) / 1000));
-    last = now;
-    if (playing) simDays += dt * rate;
-    const grow = mode === 'true' && minPlanetPixels > 0 && height > 0;
-    pieces.bodies.forEach((b, i) => {
-      const th = planetAngle(b.planet.phase, b.planet.periodDays, simDays);
-      b.mesh.position.set(b.orbitRadius * Math.cos(th), 0, b.orbitRadius * Math.sin(th));
-      b.mesh.rotation.y += playing ? dt * SPIN_RATE : 0;
-      if (grow) {
-        const dist = camera.position.distanceTo(b.mesh.position);
-        const ppu = height / (2 * tanHalfFov() * dist);
-        const r = planetRadius('true', b.planet.radiusEarth, b.planet.rpOverRs, minPlanetPixels, ppu);
-        b.mesh.scale.setScalar(r);
+    /** Applies the camera fit for the current pieces; returns true when it changed. */
+    const applyFit = (): boolean => {
+      const next = cameraFit(mode, pieces.outerOrbit);
+      if (next === fit) return false;
+      fit = next;
+      camera.far = 6000 * fit;
+      camera.updateProjectionMatrix();
+      controls.minDistance = 3 * fit;
+      controls.maxDistance = 900 * fit;
+      if (starfield) {
+        scene.remove(starfield.points);
+        starfield.dispose();
       }
-      const v = labelPos[i]!.copy(b.mesh.position);
-      v.y += b.mesh.scale.x;
+      starfield = createStarfield(2500 * fit);
+      scene.add(starfield.points);
+      return true;
+    };
+
+    const setView = (kind: 'home' | 'transit'): void => {
+      const p = cameraPreset(mode, kind, fit);
+      camera.position.set(p[0], p[1], p[2]);
+      controls.target.set(0, 0, 0);
+      controls.update();
+    };
+
+    const resize = (): void => {
+      const w = wrapper.clientWidth;
+      const h = wrapper.clientHeight;
+      if (!w || !h) return;
+      width = w;
+      height = h;
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    };
+
+    const syncLabelPositions = (): void => {
+      labelPos.length = pieces.bodies.length;
+      for (let i = 0; i < labelPos.length; i++) labelPos[i] ??= new Vector3();
+    };
+
+    applyFit();
+    setView('home');
+    syncLabelPositions();
+
+    let observer: ResizeObserver | null = null;
+    if (typeof ResizeObserver === 'function') {
+      observer = new ResizeObserver(resize);
+      observer.observe(wrapper);
+    } else {
+      window.addEventListener('resize', resize);
+    }
+    undo.push(() => {
+      if (observer) observer.disconnect();
+      else window.removeEventListener('resize', resize);
     });
-    labels.update(labelPos, camera, width, height);
-    overlays.setTime(simDays);
-    for (const cb of ticks) {
+    resize();
+
+    const tanHalfFov = (): number => Math.tan(((camera.fov * Math.PI) / 180) / 2);
+
+    let last = performance.now();
+    let rafId = 0;
+    let failed = false;
+    const frame = (now: number): void => {
+      if (failed || destroyed) return;
+      // Schedule first so an error below can never stop the loop.
+      rafId = requestAnimationFrame(frame);
+      const dt = Math.min(0.1, Math.max(0, (now - last) / 1000));
+      last = now;
+      if (playing) simDays += dt * rate;
+      const grow = mode === 'true' && minPlanetPixels > 0 && height > 0;
+      pieces.bodies.forEach((b, i) => {
+        const th = planetAngle(b.planet.phase, b.planet.periodDays, simDays);
+        b.mesh.position.set(b.orbitRadius * Math.cos(th), 0, b.orbitRadius * Math.sin(th));
+        b.mesh.rotation.y += playing ? dt * SPIN_RATE : 0;
+        if (grow) {
+          const dist = camera.position.distanceTo(b.mesh.position);
+          const ppu = height / (2 * tanHalfFov() * dist);
+          const r = planetRadius('true', b.planet.radiusEarth, b.planet.rpOverRs, minPlanetPixels, ppu);
+          b.mesh.scale.setScalar(r);
+        }
+        const v = labelPos[i]!.copy(b.mesh.position);
+        v.y += b.mesh.scale.x;
+      });
+      labels.update(labelPos, camera, width, height);
+      overlays.setTime(simDays);
+      for (const cb of ticks) {
+        try {
+          cb(simDays);
+        } catch (e) {
+          // Keep the loop and the other callbacks running; still surface the error to the host.
+          setTimeout(() => {
+            throw e;
+          });
+        }
+      }
+      if (destroyed) return; // a callback may have destroyed the view
       try {
-        cb(simDays);
+        controls.update();
+        renderer.render(scene, camera);
       } catch (e) {
-        // Keep the loop and the other callbacks running; still surface the error to the host.
+        // A render error would repeat every frame: stop the loop and surface it once.
+        failed = true;
+        cancelAnimationFrame(rafId);
         setTimeout(() => {
           throw e;
         });
       }
-    }
-    if (destroyed) return; // a callback may have destroyed the view
-    try {
-      controls.update();
-      renderer.render(scene, camera);
-    } catch (e) {
-      // A render error would repeat every frame: stop the loop and surface it once.
-      failed = true;
-      cancelAnimationFrame(rafId);
-      setTimeout(() => {
-        throw e;
-      });
-    }
-  };
-  rafId = requestAnimationFrame(frame);
+    };
+    rafId = requestAnimationFrame(frame);
 
-  return {
-    get system() {
-      return system;
-    },
-    get playing() {
-      return playing;
-    },
-    get rate() {
-      return rate;
-    },
-    get time() {
-      return simDays;
-    },
-    get scaleMode() {
-      return mode;
-    },
-    play() {
-      if (!destroyed) playing = true;
-    },
-    pause() {
-      if (!destroyed) playing = false;
-    },
-    setRate(r) {
-      if (!destroyed && validRate(r)) rate = r;
-    },
-    setTime(days) {
-      if (!destroyed && Number.isFinite(days)) simDays = days;
-    },
-    setScaleMode(m) {
-      if (destroyed || !validMode(m) || m === mode) return;
-      mode = m;
-      pieces.applyScale(mode);
-      applyFit();
-      setView('home');
-    },
-    setHabitableZoneVisible(v) {
-      if (destroyed) return;
-      showHz = v;
-      pieces.setHabitableZoneVisible(v);
-    },
-    setView(kind) {
-      if (!destroyed && (kind === 'home' || kind === 'transit')) setView(kind);
-    },
-    resetView() {
-      if (!destroyed) setView('home');
-    },
-    setSystem(next) {
-      if (destroyed) return;
-      const derived = deriveSystem(next);
-      const nextPieces = buildSystemScene(derived, mode, showHz);
-      pieces.dispose();
-      labels.dispose();
-      system = derived;
-      pieces = nextPieces;
-      scene.add(pieces.root);
-      labels = createLabels(wrapper, system.planets, { enabled: overlayState.labels });
-      syncLabelPositions();
-      if (applyFit()) setView('home');
-    },
-    setOverlays(next) {
-      if (destroyed || !next) return;
-      overlayState = mergeOverlays(overlayState, next);
-      labels.setEnabled(overlayState.labels);
-      overlays.setConfig(overlayState);
-    },
-    onTick(cb) {
-      if (destroyed) return () => {};
-      ticks.add(cb);
-      return () => {
-        ticks.delete(cb);
-      };
-    },
-    destroy() {
-      if (destroyed) return;
-      destroyed = true;
-      cancelAnimationFrame(rafId);
-      if (observer) observer.disconnect();
-      else window.removeEventListener('resize', resize);
-      ticks.clear();
-      controls.dispose();
-      pieces.dispose();
-      starfield?.dispose();
-      starfield = null;
-      scene.clear();
-      labels.dispose();
-      overlays.dispose();
-      renderer.dispose();
-      renderer.forceContextLoss();
-      wrapper.remove();
-      releaseStyle();
-    },
-  };
+    return {
+      get system() {
+        return system;
+      },
+      get playing() {
+        return playing;
+      },
+      get rate() {
+        return rate;
+      },
+      get time() {
+        return simDays;
+      },
+      get scaleMode() {
+        return mode;
+      },
+      play() {
+        if (!destroyed) playing = true;
+      },
+      pause() {
+        if (!destroyed) playing = false;
+      },
+      setRate(r) {
+        if (!destroyed && validRate(r)) rate = r;
+      },
+      setTime(days) {
+        if (!destroyed && Number.isFinite(days)) simDays = days;
+      },
+      setScaleMode(m) {
+        if (destroyed || !validMode(m) || m === mode) return;
+        mode = m;
+        pieces.applyScale(mode);
+        applyFit();
+        setView('home');
+      },
+      setHabitableZoneVisible(v) {
+        if (destroyed) return;
+        showHz = v;
+        pieces.setHabitableZoneVisible(v);
+      },
+      setView(kind) {
+        if (!destroyed && (kind === 'home' || kind === 'transit')) setView(kind);
+      },
+      resetView() {
+        if (!destroyed) setView('home');
+      },
+      setSystem(next) {
+        if (destroyed) return;
+        const derived = deriveSystem(next);
+        const nextPieces = buildSystemScene(derived, mode, showHz);
+        pieces.dispose();
+        labels.dispose();
+        system = derived;
+        pieces = nextPieces;
+        scene.add(pieces.root);
+        labels = createLabels(wrapper, system.planets, { enabled: overlayState.labels });
+        syncLabelPositions();
+        if (applyFit()) setView('home');
+      },
+      setOverlays(next) {
+        if (destroyed || !next) return;
+        overlayState = mergeOverlays(overlayState, next);
+        labels.setEnabled(overlayState.labels);
+        overlays.setConfig(overlayState);
+      },
+      onTick(cb) {
+        if (destroyed) return () => {};
+        ticks.add(cb);
+        return () => {
+          ticks.delete(cb);
+        };
+      },
+      destroy() {
+        if (destroyed) return;
+        destroyed = true;
+        cancelAnimationFrame(rafId);
+        if (observer) observer.disconnect();
+        else window.removeEventListener('resize', resize);
+        ticks.clear();
+        controls.dispose();
+        pieces.dispose();
+        starfield?.dispose();
+        starfield = null;
+        scene.clear();
+        labels.dispose();
+        overlays.dispose();
+        renderer.dispose();
+        renderer.forceContextLoss();
+        wrapper.remove();
+        releaseStyle();
+      },
+    };
+  } catch (e) {
+    for (const step of undo.reverse()) {
+      try {
+        step();
+      } catch {
+        // Keep undoing; the original error is the one to report.
+      }
+    }
+    throw e;
+  }
 }

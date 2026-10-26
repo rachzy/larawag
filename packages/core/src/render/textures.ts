@@ -13,12 +13,18 @@ export function rng(seed: number): () => number {
   };
 }
 
+function context2d(c: HTMLCanvasElement): CanvasRenderingContext2D {
+  const x = c.getContext('2d');
+  if (!x) throw new Error('larawag: no 2D canvas context available for the procedural textures');
+  return x;
+}
+
 /** Procedural 512x256 planet surface for a class and seed. Needs a DOM canvas. */
 export function planetTexture(kind: PlanetClass, seed: number): CanvasTexture {
   const c = document.createElement('canvas');
   c.width = 512;
   c.height = 256;
-  const x = c.getContext('2d')!;
+  const x = context2d(c);
   const r = rng(seed);
   if (kind === 'rocky') {
     x.fillStyle = '#8a6b4f';
@@ -62,7 +68,7 @@ export function planetTexture(kind: PlanetClass, seed: number): CanvasTexture {
 export function glowTexture(): CanvasTexture {
   const c = document.createElement('canvas');
   c.width = c.height = 256;
-  const x = c.getContext('2d')!;
+  const x = context2d(c);
   const g = x.createRadialGradient(128, 128, 0, 128, 128, 128);
   g.addColorStop(0, 'rgba(255,255,255,0.85)');
   g.addColorStop(0.18, 'rgba(255,255,255,0.35)');
