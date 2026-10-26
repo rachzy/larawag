@@ -30,7 +30,7 @@ view.setScaleMode('true');
 view.destroy();
 ```
 
-Larawag creates one wrapper `div` inside the container and puts the canvas and overlays in it. It draws no buttons; call the methods below from your own controls. Nothing runs at import time, so it can be started and stopped from any framework or none.
+Larawag creates one wrapper `div` inside the container and puts the canvas and overlays in it. The wrapper is `height: 100%`, so give the container an explicit height (or a size from its flex or grid parent); a container with automatic height collapses to a thin strip. It draws no buttons; call the methods below from your own controls. Nothing runs at import time, so it can be started and stopped from any framework or none.
 
 ## Input
 
@@ -99,7 +99,7 @@ createStarSystem(container, input, {
 |---|---|
 | `play()` / `pause()` | Start or stop the simulation clock. |
 | `playing` | Read-only. Whether the clock is running. |
-| `setRate(daysPerSecond)` | Sets the simulation speed. |
+| `setRate(daysPerSecond)` | Sets the simulation speed. Values that are not finite and positive are ignored. |
 | `rate` | Read-only. Current speed in simulated days per second. |
 | `setTime(days)` | Jumps the clock to a simulated time. |
 | `time` | Read-only. Current simulated time in days. |
@@ -134,11 +134,29 @@ Only the text overlays can be restyled; the 3D scene is fixed. Set these CSS var
 
 Larawag does not load fonts.
 
+## Visual behaviour
+
+The scene is the one from the "Star System Preview" prototype. Kept as it was:
+
+- The star: a limb-darkened sphere with an additive glow sprite, both tinted by the blackbody colour of Teff.
+- Planets: seeded procedural textures (blotches for rocky planets, bands for Neptune-like planets and gas giants), and an orange emissive glow for planets hotter than 700 K.
+- One unit-circle orbit line per planet, in the planet's colour, and a translucent habitable-zone ring.
+- About 1800 background stars, placed from a fixed seed.
+- Compressed scale (default): the star has radius 2, an orbit of `a` AU has radius `5 + 8 ln(1 + a / 0.05)`, and planet size grows slowly with radius (`0.35 + 0.18 Rp^0.6`, Rp in R⊕). True scale: the star has radius 1, and orbits and planets use `a / R*` and `Rp / R*`.
+- A simulation clock in days per second (the demo's speed slider is logarithmic, as in the prototype), home and transit camera presets, and orbit controls with damping.
+- Planet labels as HTML elements projected over the canvas.
+
+In `pnpm test:visual` (SwiftShader), the library's canvas is pixel-identical to the prototype's in the three compared views (home, transit, true scale).
+
 ## Known limits
 
 - Tested headless (SwiftShader) first; check a real GPU, touch controls and small viewports before relying on it.
 - Planet markers at true scale can be smaller than a pixel.
 - Labels are spread out vertically to avoid overlap in every view, but crowded systems can still be busy.
+- Larawag sets three's global `ColorManagement.enabled = false` when a view is created, which affects other three code on the same page.
+- The planet shading patch depends on the exact shader text of three 0.186.x, which is why the peer range is `>=0.186.0 <0.187.0`. If the text changes, creating a view throws a clear error instead of rendering wrong.
+- The styles are injected into `document.head`, so a view inside a shadow root is not supported yet.
+- At true scale on very wide systems, the camera cannot zoom closer than the minimum distance scaled to fit the system (for the Solar System, the Sun stays a few pixels across).
 
 ## TO-DO
 
@@ -147,6 +165,7 @@ Larawag does not load fonts.
 - Eccentric and inclined orbits.
 - Habitable zone from the Kopparapu et al. 2013 model, once its coefficients are checked against the paper.
 - Framework wrappers (for example `@larawag/react`).
+- Shadow DOM support.
 - Publish to npm.
 
 ## Licence
