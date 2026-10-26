@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import { RingGeometry, ShaderChunk } from 'three';
+import { RingGeometry, ShaderChunk, ShaderLib } from 'three';
+import { deriveSystem } from '../src/physics/derive.js';
 import { createHzMesh } from '../src/render/hz-mesh.js';
 import { createOrbit } from '../src/render/orbits.js';
-import { planetEmissiveIntensity, r128LightsChunk } from '../src/render/planets.js';
+import { createPlanet, planetEmissiveIntensity, r128LightsChunk } from '../src/render/planets.js';
+import { fixture } from './fixture.js';
 import { createStarfield } from '../src/render/starfield.js';
 import { rng } from '../src/render/textures.js';
 
@@ -109,6 +111,27 @@ describe('r128LightsChunk', () => {
   it.each(needles)('throws naming the missing term: %s', (needle) => {
     const mutated = original.replace(needle, '/* renamed */');
     expect(() => r128LightsChunk(mutated)).toThrow(needle);
+  });
+
+  it('createPlanet throws at creation, not at render, when the lighting chunk changed', () => {
+    const planet = deriveSystem(fixture).planets[0]!;
+    ShaderChunk.lights_physical_pars_fragment = original.replace(needles[0]!, '/* renamed */');
+    try {
+      expect(() => createPlanet(planet)).toThrow(needles[0]!);
+    } finally {
+      ShaderChunk.lights_physical_pars_fragment = original;
+    }
+  });
+
+  it('createPlanet throws at creation when the standard shader lost the lighting include', () => {
+    const planet = deriveSystem(fixture).planets[0]!;
+    const frag = ShaderLib.standard.fragmentShader;
+    ShaderLib.standard.fragmentShader = frag.replace('#include <lights_physical_pars_fragment>', '');
+    try {
+      expect(() => createPlanet(planet)).toThrow('#include <lights_physical_pars_fragment>');
+    } finally {
+      ShaderLib.standard.fragmentShader = frag;
+    }
   });
 });
 

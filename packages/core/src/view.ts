@@ -235,7 +235,9 @@ export function createStarSystem(
 
   let last = performance.now();
   let rafId = 0;
+  let failed = false;
   const frame = (now: number): void => {
+    if (failed || destroyed) return;
     // Schedule first so an error below can never stop the loop.
     rafId = requestAnimationFrame(frame);
     const dt = Math.min(0.1, Math.max(0, (now - last) / 1000));
@@ -268,8 +270,17 @@ export function createStarSystem(
       }
     }
     if (destroyed) return; // a callback may have destroyed the view
-    controls.update();
-    renderer.render(scene, camera);
+    try {
+      controls.update();
+      renderer.render(scene, camera);
+    } catch (e) {
+      // A render error would repeat every frame: stop the loop and surface it once.
+      failed = true;
+      cancelAnimationFrame(rafId);
+      setTimeout(() => {
+        throw e;
+      });
+    }
   };
   rafId = requestAnimationFrame(frame);
 

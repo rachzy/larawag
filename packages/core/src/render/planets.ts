@@ -1,4 +1,4 @@
-import { Color, Mesh, MeshStandardMaterial, ShaderChunk, SphereGeometry } from 'three';
+import { Color, Mesh, MeshStandardMaterial, ShaderChunk, ShaderLib, SphereGeometry } from 'three';
 import type { DerivedPlanet } from '../physics/derive.js';
 import { RENDER_TUNABLES } from './renderer-setup.js';
 import { planetTexture } from './textures.js';
@@ -39,20 +39,37 @@ export function r128LightsChunk(chunk: string = ShaderChunk.lights_physical_pars
   return chunk;
 }
 
-/** Builds a textured unit-radius planet sphere. Needs a DOM canvas. */
+let cachedSource: string | null = null;
+let cachedChunk = '';
+
+/** The patched chunk, computed once per lighting-chunk text; throws when the patch cannot apply. */
+function patchedLightsChunk(): string {
+  if (!ShaderLib.standard.fragmentShader.includes(LIGHTS_INCLUDE)) {
+    throw new Error(`larawag: r128 shading patch target not found: "${LIGHTS_INCLUDE}"`);
+  }
+  const source = ShaderChunk.lights_physical_pars_fragment;
+  if (source !== cachedSource) {
+    cachedChunk = r128LightsChunk(source);
+    cachedSource = source;
+  }
+  return cachedChunk;
+}
+
+/** Builds a textured unit-radius planet sphere. Needs a DOM canvas. Throws if the r128 shading patch cannot apply. */
 export function createPlanet(p: DerivedPlanet): PlanetPiece {
+  const lightsChunk = RENDER_TUNABLES.r128PlanetBrdf ? patchedLightsChunk() : null;
   const map = planetTexture(p.planetClass, p.seed);
   const material = new MeshStandardMaterial({ map, roughness: 0.9, metalness: 0 });
   if (p.teq > 700) {
     material.emissive = new Color(0xff4a10);
     material.emissiveIntensity = planetEmissiveIntensity(p.teq);
   }
-  if (RENDER_TUNABLES.r128PlanetBrdf) {
+  if (lightsChunk !== null) {
     material.onBeforeCompile = (shader) => {
       if (!shader.fragmentShader.includes(LIGHTS_INCLUDE)) {
         throw new Error(`larawag: r128 shading patch target not found: "${LIGHTS_INCLUDE}"`);
       }
-      shader.fragmentShader = shader.fragmentShader.replace(LIGHTS_INCLUDE, r128LightsChunk());
+      shader.fragmentShader = shader.fragmentShader.replace(LIGHTS_INCLUDE, lightsChunk);
     };
   }
   const geometry = new SphereGeometry(1, 40, 28);

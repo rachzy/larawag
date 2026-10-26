@@ -289,9 +289,9 @@ describe('createStarSystem with a renderer', () => {
   it('a throwing onTick callback does not stop the loop, other callbacks, or rendering; the error resurfaces asynchronously', () => {
     const v = make(fixture, { rate: 1 });
     const deferred: (() => void)[] = [];
-    const timeout = vi
-      .spyOn(globalThis, 'setTimeout')
-      .mockImplementation(((fn: () => void) => void deferred.push(fn)) as unknown as typeof setTimeout);
+    vi.spyOn(globalThis, 'setTimeout').mockImplementation(
+      ((fn: () => void) => void deferred.push(fn)) as unknown as typeof setTimeout,
+    );
     const boom = new Error('boom');
     const other = vi.fn();
     v.onTick(() => {
@@ -307,7 +307,30 @@ describe('createStarSystem with a renderer', () => {
     expect(v.time).toBeGreaterThan(0);
     expect(deferred).toHaveLength(2);
     expect(deferred[0]).toThrow(boom);
-    timeout.mockRestore();
+  });
+
+  it('a render error stops the loop and surfaces once, asynchronously; destroy() still works', () => {
+    const v = make();
+    const deferred: (() => void)[] = [];
+    vi.spyOn(globalThis, 'setTimeout').mockImplementation(
+      ((fn: () => void) => void deferred.push(fn)) as unknown as typeof setTimeout,
+    );
+    const boom = new Error('render boom');
+    fake!.render.mockImplementation(() => {
+      throw boom;
+    });
+    expect(() => step(100)).not.toThrow();
+    expect(frames.size).toBe(0);
+    step(200);
+    step(300);
+    expect(fake!.render).toHaveBeenCalledTimes(1);
+    expect(deferred).toHaveLength(1);
+    expect(deferred[0]).toThrow(boom);
+    const r = fake!;
+    v.destroy();
+    v.destroy();
+    expect(r.dispose).toHaveBeenCalledOnce();
+    expect(container.childElementCount).toBe(0);
   });
 
   it('destroying the view from an onTick callback stops the loop without rendering', () => {
