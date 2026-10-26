@@ -219,6 +219,25 @@ export function createStarSystem(
       controls.update();
     };
 
+    let last = performance.now();
+    let rafId = 0;
+    let failed = false;
+
+    /** Renders one frame; on error stops the loop for good and rethrows once, asynchronously. */
+    const renderNow = (updateControls: boolean): void => {
+      try {
+        if (updateControls) controls.update();
+        renderer.render(scene, camera);
+      } catch (e) {
+        // A render error would repeat every frame.
+        failed = true;
+        cancelAnimationFrame(rafId);
+        setTimeout(() => {
+          throw e;
+        });
+      }
+    };
+
     const resize = (): void => {
       const w = wrapper.clientWidth;
       const h = wrapper.clientHeight;
@@ -228,6 +247,8 @@ export function createStarSystem(
       renderer.setSize(w, h, false);
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
+      // setSize clears the canvas; redraw now unless the loop has not started or has stopped.
+      if (rafId && !failed && !destroyed) renderNow(false);
     };
 
     const syncLabelPositions = (): void => {
@@ -254,9 +275,6 @@ export function createStarSystem(
 
     const tanHalfFov = (): number => Math.tan(((camera.fov * Math.PI) / 180) / 2);
 
-    let last = performance.now();
-    let rafId = 0;
-    let failed = false;
     const frame = (now: number): void => {
       if (failed || destroyed) return;
       // Schedule first so an error below can never stop the loop.
@@ -291,17 +309,7 @@ export function createStarSystem(
         }
       }
       if (destroyed) return; // a callback may have destroyed the view
-      try {
-        controls.update();
-        renderer.render(scene, camera);
-      } catch (e) {
-        // A render error would repeat every frame: stop the loop and surface it once.
-        failed = true;
-        cancelAnimationFrame(rafId);
-        setTimeout(() => {
-          throw e;
-        });
-      }
+      renderNow(true);
     };
     rafId = requestAnimationFrame(frame);
 

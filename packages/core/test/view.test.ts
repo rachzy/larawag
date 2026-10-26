@@ -485,6 +485,19 @@ describe('createStarSystem with a renderer', () => {
     expect(lastCamera().aspect).toBe(2);
   });
 
+  it('re-renders right after a resize so the cleared canvas never shows', () => {
+    make();
+    step(16);
+    const w = container.querySelector<HTMLElement>('.larawag')!;
+    Object.defineProperty(w, 'clientWidth', { configurable: true, value: 800 });
+    Object.defineProperty(w, 'clientHeight', { configurable: true, value: 400 });
+    const before = fake!.render.mock.calls.length;
+    window.dispatchEvent(new Event('resize'));
+    expect(fake!.render).toHaveBeenCalledTimes(before + 1);
+    const setSizeOrder = fake!.setSize.mock.invocationCallOrder.at(-1)!;
+    expect(fake!.render.mock.invocationCallOrder.at(-1)!).toBeGreaterThan(setSizeOrder);
+  });
+
   it('destroy() releases everything and later calls are no-ops', () => {
     const v = make();
     step(16);
