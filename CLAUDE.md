@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Framework-agnostic three.js library that renders a hypothetical single-star planetary system (one star plus a list of planets, given as numbers) as an interactive 3D scene in a host-provided element. pnpm workspaces monorepo, TypeScript compiled with plain `tsc`.
 
-The repo is at the start: only `LICENSE`, `.gitignore` and `.claude/settings.json` (Superpowers plugin) exist. The layout and commands below come from the approved design and plan, so check the tree before relying on them.
+The library (`packages/core`), the demo (`examples/vanilla`) and the visual harness (`tools/visual`) exist; design notes and plans live in the git-ignored `tmp/plans/`.
 
 - The visual spec is the "Star System Preview" prototype (single HTML page, three r128 UMD). The library must reproduce its canvas without visible change. Planets, scale modes, camera presets and the starfield are defined by that page and the kickoff prompt; do not restyle the 3D scene.
 - Single-star systems only. Circular, coplanar orbits. No moons, binaries, planet picking or framework wrappers in v1.
@@ -23,7 +23,7 @@ The repo is at the start: only `LICENSE`, `.gitignore` and `.claude/settings.jso
 
 ## Commands
 
-`pnpm install`, `pnpm -r build`, `pnpm -r test`, `pnpm --filter @larawag/core test <name>` for a single test file, `pnpm --filter vanilla dev` for the demo, `pnpm test:visual` for the screenshot comparison. The Vitest fixture is star 5100 K / 0.80 R☉ / 0.85 M☉ with planet b (4.2 d, 1.5 R⊕) and planet c (18.5 d, 3.6 R⊕).
+`pnpm install`, `pnpm -r build`, `pnpm -r test`, `pnpm --filter @larawag/core test <name>` for a single test file, `pnpm --filter vanilla dev` for the demo, `pnpm test:visual` for the screenshot comparison (run `pnpm --filter @larawag/visual exec playwright install chromium` once first, or set `LARAWAG_CHROMIUM` to another Chromium's executable path). The Vitest fixture is star 5100 K / 0.80 R☉ / 0.85 M☉ with planet b (4.2 d, 1.5 R⊕) and planet c (18.5 d, 3.6 R⊕).
 
 ## Conventions
 
