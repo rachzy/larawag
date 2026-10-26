@@ -16,7 +16,8 @@ export async function startHarness(): Promise<Harness> {
   await server.listen(0);
   const base = server.resolvedUrls!.local[0]!;
   const browser = await chromium.launch({
-    executablePath: '/opt/pw-browsers/chromium',
+    // Playwright's own Chromium (`pnpm exec playwright install chromium`) unless LARAWAG_CHROMIUM names another.
+    executablePath: process.env.LARAWAG_CHROMIUM || undefined,
     args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'],
   });
   return {
