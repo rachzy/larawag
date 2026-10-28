@@ -237,6 +237,46 @@ Only the text overlays can be restyled; the 3D scene is fixed. Set these CSS var
 
 Larawag does not load fonts.
 
+## React
+
+`@larawag/react` wraps the same view in a component for React 19.
+
+```sh
+pnpm add @larawag/react @larawag/core three
+```
+
+```tsx
+import { useRef } from 'react';
+import { StarSystem, type StarSystemHandle } from '@larawag/react';
+
+function Preview({ system }) {
+  const view = useRef<StarSystemHandle>(null);
+  return (
+    <div style={{ height: 480 }}>
+      <StarSystem system={system} scaleMode="compressed" ref={view} onError={(e) => console.warn(e)} />
+      <button onClick={() => view.current?.setView('transit')}>Transit view</button>
+    </div>
+  );
+}
+```
+
+The component renders one `div` with `width: 100%; height: 100%`, so size its parent. It creates the view after mount and destroys it on unmount, so it is safe under StrictMode and renders an empty `div` on the server. The file starts with `'use client'` for the Next.js App Router.
+
+| Prop | Behaviour |
+|---|---|
+| `system` (required) | Compared by value: a new object with the same content does nothing; different content calls `setSystem`. |
+| `scaleMode`, `showHabitableZone`, `rate`, `overlays` | Used at creation, then each change calls the matching method. `overlays` is compared field by field. |
+| `playing` | Left unset, the view autoplays (not under reduced motion). Set, it plays or pauses the view. |
+| `autoplay`, `minPlanetPixels`, `fallbackText` | Creation options: a change rebuilds the view and keeps the simulated time. |
+| `onTick(days)` | Called every frame. Changing the function does not resubscribe. |
+| `onError(error)` | Called when `system` is invalid (a `LarawagValidationError`). The previous system stays on screen; if the first one is invalid, nothing is drawn until a valid one arrives. |
+| `className`, `style` | On the `div`. `style` is merged over the full-size default. |
+| `ref` | A `StarSystemHandle`: `play()`, `pause()`, `setTime(days)`, `setView(preset)`, `resetView()`, and `view`, the live view (or `null`), for everything else such as `view.system`. |
+
+`useStarSystem(containerRef, system, props)` does the same for an element you render yourself and returns the handle.
+
+Avoid setting React state from `onTick` on every frame; the clock overlay already shows the time.
+
 ## Examples
 
 `examples/vanilla` is a plain HTML demo with a system picker (the example K dwarf, the Solar System with its planet presets, axial tilts and Saturn's rings, TRAPPIST-1 given only by its spectral type, a B5V blue dwarf and a K5III red giant) and a form to edit the star and planets.
@@ -244,6 +284,12 @@ Larawag does not load fonts.
 ```sh
 pnpm install
 pnpm --filter vanilla dev
+```
+
+`examples/react` shows the same systems and controls through `<StarSystem>` (no editing form):
+
+```sh
+pnpm --filter react-demo dev
 ```
 
 ## Development
@@ -255,7 +301,7 @@ pnpm --filter @larawag/core test <name>   # one test file
 pnpm test:visual                          # screenshots against the original prototype
 ```
 
-`pnpm test:visual` needs Playwright's Chromium and compares the library's canvas with the original three r128 page in home view, transit view and true scale.
+`pnpm test:visual` needs Playwright's Chromium. It compares the library's canvas with the original three r128 page in home view, transit view and true scale, and checks that the view and the React wrapper free every GPU object, frame callback and overlay.
 
 Run `pnpm --filter @larawag/visual exec playwright install chromium` once before the first `pnpm test:visual`. To use another Chromium build, set `LARAWAG_CHROMIUM` to its executable path.
 
@@ -292,7 +338,7 @@ In `pnpm test:visual` (SwiftShader, with `planetStyle: 'prototype'`), the librar
 - Moons.
 - Eccentric and inclined orbits.
 - Habitable zone from the Kopparapu et al. 2013 model, once its coefficients are checked against the paper.
-- Framework wrappers (for example `@larawag/react`).
+- Angular wrapper (`@larawag/angular`).
 - Shadow DOM support.
 - Publish to npm.
 
