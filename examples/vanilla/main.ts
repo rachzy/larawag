@@ -85,6 +85,8 @@ function addPlanetRow(p: PlanetInput = { radius: 1, period: 10 }): void {
       </label>
       <label>Texture <input type="text" list="texture-presets" data-f="texture" placeholder="inferred" aria-label="Planet ${n} texture: a preset or an image URL"></label>
       <label>Colour <input type="text" data-f="colour" placeholder="inferred" aria-label="Planet ${n} colour as #rrggbb"></label>
+      <label>Tilt (°) <input type="number" step="any" inputmode="decimal" data-f="obliquity" placeholder="0" aria-label="Planet ${n} axial tilt in degrees"></label>
+      <label class="check"><input type="checkbox" data-f="rings" aria-label="Planet ${n} has rings"> Rings</label>
       <label>Phase (rad) <input type="number" step="any" inputmode="decimal" data-f="phase" aria-label="Planet ${n} phase"></label>
       <button type="button" data-f="remove" aria-label="Remove planet ${n}">Remove</button>
     </div>`;
@@ -96,6 +98,8 @@ function addPlanetRow(p: PlanetInput = { radius: 1, period: 10 }): void {
   f<HTMLSelectElement>('class').value = p.planetClass ?? '';
   f<HTMLInputElement>('texture').value = p.texture ?? '';
   f<HTMLInputElement>('colour').value = p.colour ?? '';
+  f<HTMLInputElement>('obliquity').value = p.obliquity === undefined ? '' : String(p.obliquity);
+  f<HTMLInputElement>('rings').checked = Boolean(p.rings);
   f<HTMLInputElement>('phase').value = String(p.phase ?? 0);
   f<HTMLButtonElement>('remove').addEventListener('click', () => {
     row.remove();
@@ -150,6 +154,9 @@ function readForm(): SystemInput {
     if (texture) p.texture = texture;
     const colour = f('colour').value.trim();
     if (colour) p.colour = colour;
+    const obliquity = num(f('obliquity'));
+    if (!Number.isNaN(obliquity)) p.obliquity = obliquity;
+    if (f('rings').checked) p.rings = true;
     return p;
   });
   return { star, planets };
@@ -211,6 +218,7 @@ function renderCards(): void {
         ['Insolation', `${fmt(p.insolation, 2)} S⊕`],
         ['Teq', `${fmt(p.teq, 0)} K`],
         ['Look', lookText(p.appearance)],
+        ...(p.rings ? ([['Rings', `${p.rings.icy ? 'icy' : 'dusty'}, ${fmt(p.rings.inner, 2)}–${fmt(p.rings.outer, 2)} Rp`]] as [string, string][]) : []),
       ]),
     ),
   ];

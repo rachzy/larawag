@@ -51,6 +51,8 @@ Units: star in solar units (Teff in K, radius in R☉, mass in M☉); planets in
 | `planet.planetClass` | Optional. `'rocky'`, `'neptune-like'`, `'gas-giant'` or `'ocean-world'`. Without it the class is guessed from radius (see below); an ocean world is never guessed. |
 | `planet.texture` | Optional. A preset look (`'mercury'`, `'venus'`, `'earth'`, `'mars'`, `'jupiter'`, `'saturn'`, `'uranus'`, `'neptune'`) or an image URL (`http(s)://`, `/`, `./`, `../`, `data:image/`, `blob:`). Default: inferred, see [Planet looks](#planet-looks). |
 | `planet.colour` | Optional. Surface colour as `#rgb` or `#rrggbb`. It replaces the palette and keeps the pattern. |
+| `planet.rings` | Optional. `true` for rings with inferred defaults, or `{ inner, outer, colour, opacity }` to override any of them (radii in planet radii). Default: no rings. See [Rings](#rings). |
+| `planet.obliquity` | Optional. Axial tilt in degrees, default 0. Tilts the planet's spin axis and its rings. |
 | `planet.albedo` | Bond albedo for the equilibrium temperature, default 0.3. |
 | `name`, `planet.seed` | Optional. Unnamed planets are labelled b, c, d… up to z, then `planet 26`, `planet 27`… The seed fixes the texture; the default is `11 + 5 × index`. |
 
@@ -146,6 +148,16 @@ Every planet is painted procedurally on a canvas; nothing is downloaded unless y
 
 Neighbouring rows blend over 50 K, so colours change smoothly with temperature. Each planet's colours then shift by its seed, within ±8° of hue and ±0.08 of lightness, never more saturated, so two similar planets differ a little and nothing turns neon. The Sudarsky classes ([Sudarsky et al. 2000](https://ui.adsabs.harvard.edu/abs/2000ApJ...538..885S/abstract)) are model predictions, and the haze and lava looks are guesses: like everything Larawag draws, the look is hypothetical. The orange glow above 700 K applies to every look.
 
+## Rings
+
+Rings are only drawn when you ask for them: neither size nor temperature predicts them. With `rings: true`:
+
+- They span 1.2 to 2.3 planet radii, like Saturn's main rings (C ring at about 1.24, outer edge of the A ring at about 2.27). Rings sit inside the Roche limit, about 2.4 planet radii for icy material, so the default stays inside it.
+- Below 150 K they are icy: bright beige-white and mostly opaque (`#ded0b4`, opacity 0.85), with seeded ringlets and a Cassini-like gap at 1.95 to 2.02 planet radii. Water ice survives at these temperatures.
+- From 150 K they are dusty: dark grey-brown and faint (`#6e6258`, opacity 0.35), like the rings of Jupiter, Uranus and Neptune, since ice would sublimate.
+
+Rings lie in the planet's equator, so give the planet an `obliquity` to tilt them; at 0 they lie in the orbital plane and vanish in the transit view. `inner` must be above 1 and below `outer`; `opacity` is in (0, 1]. Rings are unlit and cast no shadows, and the planet casts none on them.
+
 ## Options
 
 The third argument of `createStarSystem` is optional. Every field is optional too.
@@ -227,7 +239,7 @@ Larawag does not load fonts.
 
 ## Examples
 
-`examples/vanilla` is a plain HTML demo with a system picker (the example K dwarf, the Solar System with its planet presets, TRAPPIST-1 given only by its spectral type, a B5V blue dwarf and a K5III red giant) and a form to edit the star and planets.
+`examples/vanilla` is a plain HTML demo with a system picker (the example K dwarf, the Solar System with its planet presets, axial tilts and Saturn's rings, TRAPPIST-1 given only by its spectral type, a B5V blue dwarf and a K5III red giant) and a form to edit the star and planets.
 
 ```sh
 pnpm install
@@ -253,6 +265,7 @@ The scene is the one from the "Star System Preview" prototype. Kept as it was:
 
 - The star: a limb-darkened sphere with an additive glow sprite, both tinted by the blackbody colour of Teff.
 - Planets: seeded procedural textures (blotches for rocky planets, bands for Neptune-like planets and gas giants, blue blotches under white cloud streaks for ocean worlds), and an orange emissive glow for planets hotter than 700 K. These are the textures of `planetStyle: 'prototype'`; the default style keeps the patterns and infers the colours (see [Planet looks](#planet-looks)).
+- Optional rings: a flat, unlit, see-through ring in the planet's (tilted) equator, painted with ringlets.
 - One unit-circle orbit line per planet, in the planet's colour, and a translucent habitable-zone ring.
 - About 1800 background stars, placed from a fixed seed.
 - Compressed scale (default): the star has radius 2, an orbit of `a` AU has radius `5 + 8 ln(1 + a / 0.05)`, and planet size grows slowly with radius (`0.35 + 0.18 Rp^0.6`, Rp in R⊕). True scale: the star has radius 1, and orbits and planets use `a / R*` and `Rp / R*`.
