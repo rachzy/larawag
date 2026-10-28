@@ -173,7 +173,7 @@ Larawag does not load fonts.
 
 ## Examples
 
-`examples/vanilla` is a plain HTML demo with a system picker (the example K dwarf, the Solar System, and TRAPPIST-1 given only by its spectral type) and a form to edit the star and planets.
+`examples/vanilla` is a plain HTML demo with a system picker (the example K dwarf, the Solar System, TRAPPIST-1 given only by its spectral type, a B5V blue dwarf and a K5III red giant) and a form to edit the star and planets.
 
 ```sh
 pnpm install

@@ -68,4 +68,33 @@ export const PRESETS: Preset[] = [
       ],
     },
   },
+  {
+    id: 'blue-dwarf',
+    label: 'Blue dwarf (B5V, hypothetical planets)',
+    rateSlider: 2,
+    // A hot main-sequence (dwarf) star: Teff, radius and mass all come from the B5V table row.
+    input: {
+      star: { name: 'Blue dwarf', spectralType: 'B5V' },
+      planets: [
+        { name: 'b', a: 0.6, radius: 1.3, phase: 0.4 },
+        { name: 'c', a: 4, radius: 11, phase: 2.1 },
+        { name: 'd', a: 28, radius: 2.4, phase: 3.9 },
+        { name: 'e', a: 70, radius: 8.5, phase: 5.3 },
+      ],
+    },
+  },
+  {
+    id: 'red-giant',
+    label: 'Red giant (K5III, Aldebaran-like, hypothetical planets)',
+    rateSlider: 2,
+    // Giants need radius and mass. Teff is given too: the dwarf table's K5 Teff (4440 K) is too hot for a giant.
+    input: {
+      star: { name: 'Red giant', spectralType: 'K5III', teff: 3900, radius: 44, mass: 1.16 },
+      planets: [
+        { name: 'b', a: 1.6, radius: 12, phase: 1.1 },
+        { name: 'c', a: 5, radius: 3.2, phase: 2.8 },
+        { name: 'd', a: 24, radius: 1.8, phase: 4.6 },
+      ],
+    },
+  },
 ];
