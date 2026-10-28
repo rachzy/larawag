@@ -1,6 +1,6 @@
 import { createStarSystem, type StarSystemView } from '@larawag/core';
 
-// The prototype's example system, with its phases (seeds default to the prototype's 11 and 16).
+// The prototype's example system, with its phases (seeds default to the prototype's 11 and 16) and its planet textures.
 const view = createStarSystem(
   document.getElementById('stage')!,
   {
@@ -10,7 +10,7 @@ const view = createStarSystem(
       { name: 'Candidate c', period: 18.5, radius: 3.6, phase: 2.9 },
     ],
   },
-  { autoplay: false, overlays: { labels: false, clock: false, badge: false } },
+  { autoplay: false, planetStyle: 'prototype', overlays: { labels: false, clock: false, badge: false } },
 );
 view.setTime(0);
 

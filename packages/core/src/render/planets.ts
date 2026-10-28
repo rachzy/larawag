@@ -1,7 +1,10 @@
-import { Color, Mesh, MeshStandardMaterial, ShaderChunk, ShaderLib, SphereGeometry } from 'three';
+import { Color, Mesh, MeshStandardMaterial, ShaderChunk, ShaderLib, SphereGeometry, TextureLoader, type Texture } from 'three';
 import type { DerivedPlanet } from '../physics/derive.js';
 import { RENDER_TUNABLES } from './renderer-setup.js';
-import { planetTexture } from './textures.js';
+import { appearanceTexture, planetTexture } from './textures.js';
+
+/** `'inferred'` paints guessed looks from class and temperature; `'prototype'` keeps the v1 prototype's textures for them. */
+export type PlanetStyle = 'inferred' | 'prototype';
 
 /** A planet sphere and its disposer. */
 export interface PlanetPiece {
@@ -55,10 +58,16 @@ function patchedLightsChunk(): string {
   return cachedChunk;
 }
 
-/** Builds a textured unit-radius planet sphere. Needs a DOM canvas. Throws if the r128 shading patch cannot apply. */
-export function createPlanet(p: DerivedPlanet): PlanetPiece {
+/**
+ * Builds a textured unit-radius planet sphere. An image texture replaces the procedural one
+ * once it loads; on error the procedural one stays. Needs a DOM canvas. Throws if the r128
+ * shading patch cannot apply.
+ */
+export function createPlanet(p: DerivedPlanet, style: PlanetStyle = 'inferred'): PlanetPiece {
   const lightsChunk = RENDER_TUNABLES.r128PlanetBrdf ? patchedLightsChunk() : null;
-  const map = planetTexture(p.planetClass, p.seed);
+  const a = p.appearance;
+  let map: Texture = style === 'prototype' && a.inferred ? planetTexture(p.planetClass, p.seed) : appearanceTexture(a);
+  let disposed = false;
   const material = new MeshStandardMaterial({ map, roughness: 0.9, metalness: 0 });
   if (p.teq > 700) {
     material.emissive = new Color(0xff4a10);
@@ -72,11 +81,24 @@ export function createPlanet(p: DerivedPlanet): PlanetPiece {
       shader.fragmentShader = shader.fragmentShader.replace(LIGHTS_INCLUDE, lightsChunk);
     };
   }
+  if (a.imageUrl !== null) {
+    new TextureLoader().setCrossOrigin('anonymous').load(a.imageUrl, (image) => {
+      if (disposed) {
+        image.dispose();
+        return;
+      }
+      image.colorSpace = RENDER_TUNABLES.textureColorSpace;
+      map.dispose();
+      map = material.map = image;
+      material.needsUpdate = true;
+    });
+  }
   const geometry = new SphereGeometry(1, 40, 28);
   const mesh = new Mesh(geometry, material);
   return {
     mesh,
     dispose() {
+      disposed = true;
       geometry.dispose();
       material.dispose();
       map.dispose();

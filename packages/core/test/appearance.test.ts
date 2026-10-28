@@ -85,13 +85,13 @@ describe('varyPalette', () => {
 describe('planetAppearance', () => {
   it('infers pattern and palette from class and temperature', () => {
     const a = planetAppearance({ planetClass: 'gas-giant', teq: 110, seed: 11 });
-    expect(a).toMatchObject({ pattern: 'banded', seed: 11, preset: null, imageUrl: null });
+    expect(a).toMatchObject({ pattern: 'banded', seed: 11, preset: null, imageUrl: null, inferred: true });
     expect(a.palette).toEqual(varyPalette(inferredPalette('gas-giant', 110), 11));
   });
 
   it('uses the jupiter preset as the prototype gas giant with seed 31, whatever the planet', () => {
     const a = planetAppearance({ planetClass: 'rocky', teq: 900, seed: 3, texture: 'jupiter' });
-    expect(a).toMatchObject({ pattern: 'banded', seed: 31, preset: 'jupiter', polarCaps: false });
+    expect(a).toMatchObject({ pattern: 'banded', seed: 31, preset: 'jupiter', polarCaps: false, inferred: false });
     expect(a.palette).toEqual([[200, 160, 110], [170, 120, 80], [225, 195, 150]]);
   });
 
@@ -112,6 +112,7 @@ describe('planetAppearance', () => {
     const a = planetAppearance({ planetClass: 'rocky', teq: 300, seed: 9, colour: '#ff0000' });
     expect(a.pattern).toBe('cratered');
     expect(a.palette[0]).toEqual([255, 0, 0]);
+    expect(a.inferred).toBe(false);
     const j = planetAppearance({ planetClass: 'rocky', teq: 300, seed: 9, texture: 'jupiter', colour: '#336699' });
     expect(j.pattern).toBe('banded');
     expect(j.seed).toBe(31);

@@ -29,6 +29,8 @@ export interface PlanetAppearance {
   preset: TexturePreset | null;
   /** Image to load as the texture; the procedural look shows until it loads or if it fails. */
   imageUrl: string | null;
+  /** True when neither a preset nor a colour was given, so the palette is a guess. */
+  inferred: boolean;
 }
 
 /** True when `name` is one of `TEXTURE_PRESETS`. */
@@ -75,7 +77,7 @@ const PATTERNS: Record<PlanetClass, TexturePattern> = {
   'ocean-world': 'ocean',
 };
 
-type PresetLook = Omit<PlanetAppearance, 'preset' | 'imageUrl'>;
+type PresetLook = Omit<PlanetAppearance, 'preset' | 'imageUrl' | 'inferred'>;
 
 const look = (pattern: TexturePattern, palette: Palette, seed: number, polarCaps = false, darkSpot = false): PresetLook => ({
   pattern,
@@ -188,5 +190,5 @@ export function planetAppearance(input: AppearanceInput): PlanetAppearance {
     ? PRESETS[preset]
     : look(PATTERNS[input.planetClass], varyPalette(inferredPalette(input.planetClass, input.teq), input.seed), input.seed);
   const palette = input.colour === undefined ? base.palette : paletteFromColour(input.colour, base.pattern, base.palette);
-  return { ...base, palette, preset, imageUrl };
+  return { ...base, palette, preset, imageUrl, inferred: !preset && input.colour === undefined };
 }

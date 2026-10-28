@@ -3,7 +3,7 @@ import type { Mesh } from 'three';
 import type { DerivedPlanet, DerivedSystem } from '../physics/derive.js';
 import { createHzMesh, type HzPiece } from './hz-mesh.js';
 import { createOrbit, type OrbitPiece } from './orbits.js';
-import { createPlanet, type PlanetPiece } from './planets.js';
+import { createPlanet, type PlanetPiece, type PlanetStyle } from './planets.js';
 import { hzRadius, orbitRadius, planetRadius, starScene, type ScaleMode } from './scales.js';
 import { createStar, type StarPiece } from './star.js';
 
@@ -31,6 +31,7 @@ export function buildSystemScene(
   system: DerivedSystem,
   mode: ScaleMode,
   showHabitableZone: boolean,
+  planetStyle: PlanetStyle = 'inferred',
 ): SystemScene {
   const root = new Group();
   const star: StarPiece = createStar(system.star.colour);
@@ -39,7 +40,7 @@ export function buildSystemScene(
   const orbits: OrbitPiece[] = [];
   const bodies: SystemBody[] = system.planets.map((planet) => {
     const orbit = createOrbit(planet.colour);
-    const piece = createPlanet(planet);
+    const piece = createPlanet(planet, planetStyle);
     orbits.push(orbit);
     planets.push(piece);
     root.add(orbit.line, piece.mesh);

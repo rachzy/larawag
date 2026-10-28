@@ -7,6 +7,7 @@ import { createLabels, type Labels } from './render/labels.js';
 import { createOverlays, type OverlayConfig } from './render/overlays.js';
 import { createRenderer } from './render/renderer-setup.js';
 import { planetRadius, type ScaleMode } from './render/scales.js';
+import type { PlanetStyle } from './render/planets.js';
 import { buildSystemScene, type SystemScene } from './render/scene-assembly.js';
 import { createStarfield, type StarfieldPiece } from './render/starfield.js';
 import { injectStyles } from './render/styles.js';
@@ -23,6 +24,11 @@ export interface ViewOptions {
   autoplay?: boolean;
   /** At true scale, minimum planet size in pixels. Default 0 (off). */
   minPlanetPixels?: number;
+  /**
+   * Default 'inferred': planets without a texture or colour get a look guessed from class and
+   * temperature. 'prototype' gives them the v1 prototype's textures instead.
+   */
+  planetStyle?: 'inferred' | 'prototype';
   overlays?: {
     /** Default true. */
     labels?: boolean;
@@ -104,6 +110,7 @@ export function createStarSystem(
     typeof options.minPlanetPixels === 'number' && options.minPlanetPixels > 0
       ? options.minPlanetPixels
       : 0;
+  const planetStyle: PlanetStyle = options.planetStyle === 'prototype' ? 'prototype' : 'inferred';
   let overlayState = mergeOverlays({ labels: true, clock: true, badge: true }, options.overlays);
   let simDays = 0;
   let destroyed = false;
@@ -181,7 +188,7 @@ export function createStarSystem(
 
     let fit = 0;
     let starfield: StarfieldPiece | null = null;
-    let pieces: SystemScene = buildSystemScene(system, mode, showHz);
+    let pieces: SystemScene = buildSystemScene(system, mode, showHz, planetStyle);
     undo.push(() => pieces.dispose());
     scene.add(pieces.root);
     let labels: Labels = createLabels(wrapper, system.planets, { enabled: overlayState.labels });
@@ -362,7 +369,7 @@ export function createStarSystem(
       setSystem(next) {
         if (destroyed) return;
         const derived = deriveSystem(next);
-        const nextPieces = buildSystemScene(derived, mode, showHz);
+        const nextPieces = buildSystemScene(derived, mode, showHz, planetStyle);
         pieces.dispose();
         labels.dispose();
         system = derived;

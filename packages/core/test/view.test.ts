@@ -7,14 +7,19 @@ import { planetAngle } from '../src/view.js';
 import type { StarSystemView } from '../src/index.js';
 import { cameraPreset } from '../src/render/camera.js';
 import { createRenderer } from '../src/render/renderer-setup.js';
-import { planetTexture } from '../src/render/textures.js';
+import { appearanceTexture, planetTexture } from '../src/render/textures.js';
 import type { SystemInput } from '../src/physics/types.js';
 import { fixture } from './fixture.js';
 
 // jsdom has no canvas 2D context: textures become plain three Textures.
 vi.mock('../src/render/textures.js', async (importOriginal) => {
   const real = await importOriginal<typeof import('../src/render/textures.js')>();
-  return { ...real, planetTexture: vi.fn(() => new Texture()), glowTexture: () => new Texture() };
+  return {
+    ...real,
+    planetTexture: vi.fn(() => new Texture()),
+    appearanceTexture: vi.fn(() => new Texture()),
+    glowTexture: () => new Texture(),
+  };
 });
 
 // The real createRenderer by default; tests that need a "working" GL swap in a fake.
@@ -198,7 +203,7 @@ describe('createStarSystem with a renderer', () => {
 
   it('undoes everything and rethrows when building the scene fails', () => {
     const boom = new Error('larawag: no 2D canvas context');
-    vi.mocked(planetTexture).mockImplementationOnce(() => {
+    vi.mocked(appearanceTexture).mockImplementationOnce(() => {
       throw boom;
     });
     expect(() => make()).toThrow(boom);
@@ -469,6 +474,27 @@ describe('createStarSystem with a renderer', () => {
     v.setSystem({ star: { spectralType: 'A0V', name: 'Vega-like' }, planets: fixture.planets });
     expect(v.system.star).toMatchObject({ name: 'Vega-like', teff: 9700, spectralType: 'A0V' });
     expect(() => step(16)).not.toThrow();
+  });
+
+  it('paints inferred looks by default, and prototype textures with planetStyle prototype', () => {
+    vi.mocked(planetTexture).mockClear();
+    vi.mocked(appearanceTexture).mockClear();
+    make(fixture);
+    expect(planetTexture).not.toHaveBeenCalled();
+    expect(appearanceTexture).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps given looks under planetStyle prototype', () => {
+    vi.mocked(planetTexture).mockClear();
+    vi.mocked(appearanceTexture).mockClear();
+    const v = make(
+      { ...fixture, planets: [fixture.planets[0]!, { ...fixture.planets[1]!, texture: 'jupiter' }] },
+      { planetStyle: 'prototype' },
+    );
+    expect(planetTexture).toHaveBeenCalledWith('rocky', 11);
+    expect(appearanceTexture).toHaveBeenCalledOnce();
+    v.setSystem(fixture);
+    expect(planetTexture).toHaveBeenCalledTimes(3);
   });
 
   it('setOverlays merges into the current config', () => {
