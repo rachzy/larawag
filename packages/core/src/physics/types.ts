@@ -1,12 +1,19 @@
 /** Rough planet class, guessed from size. */
 export type PlanetClass = 'rocky' | 'neptune-like' | 'gas-giant';
 
-/** Host star. Solar units: Teff in K, radius in R☉, mass in M☉. */
+/**
+ * Host star. Solar units: Teff in K, radius in R☉, mass in M☉.
+ * `teff`, `radius` and `mass` are required unless `spectralType` supplies them.
+ */
 export interface StarInput {
-  teff: number;
-  radius: number;
-  mass: number;
+  teff?: number;
+  radius?: number;
+  mass?: number;
   name?: string;
+  /** Spectral type such as `"G2V"`; fills missing Teff, radius and mass from the main-sequence table. */
+  spectralType?: string;
+  /** Override: star colour as `#rgb` or `#rrggbb`. */
+  colour?: string;
   /** Override: luminosity in L☉. */
   luminosity?: number;
   /** Override: habitable zone edges in AU. */

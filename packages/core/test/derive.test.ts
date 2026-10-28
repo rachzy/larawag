@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { deriveSystem, LarawagValidationError, type SystemInput } from '../src/physics.js';
+import { blackbodyColour, deriveSystem, LarawagValidationError, type SystemInput } from '../src/physics.js';
 import { fixture } from './fixture.js';
 
 const star = fixture.star;
@@ -106,6 +106,34 @@ describe('deriveSystem', () => {
   it('throws LarawagValidationError for invalid input', () => {
     expect(() => deriveSystem({ star: { ...star, teff: -1 }, planets: [] })).toThrow(LarawagValidationError);
     expect(() => deriveSystem(null as never)).toThrow(LarawagValidationError);
+  });
+
+  it('takes the star from its spectral type', () => {
+    const d = deriveSystem({ star: { spectralType: 'G2V' }, planets: [] });
+    expect(d.star).toMatchObject({ teff: 5770, radius: 1.012, mass: 1.0, spectralType: 'G2V' });
+    expect(d.star.colour).toEqual(blackbodyColour(5770));
+  });
+
+  it('keeps given values over the spectral type, colour included', () => {
+    const d = deriveSystem({ star: { spectralType: 'G2V', teff: 6000 }, planets: [] });
+    expect(d.star.teff).toBe(6000);
+    expect(d.star.radius).toBe(1.012);
+    expect(d.star.colour).toEqual(blackbodyColour(6000));
+  });
+
+  it('uses the dwarf table teff for a giant', () => {
+    const d = deriveSystem({ star: { spectralType: 'K0III', radius: 11, mass: 1.5 }, planets: [] });
+    expect(d.star).toMatchObject({ teff: 5270, radius: 11, mass: 1.5 });
+  });
+
+  it('keeps a colour override', () => {
+    const d = deriveSystem({ star: { ...star, colour: '#ff8000' }, planets: [] });
+    expect(d.star.colour).toEqual([1, 128 / 255, 0]);
+    expect(d.star.colourCss).toBe('rgb(255,128,0)');
+  });
+
+  it('has no spectral type when none is given', () => {
+    expect(deriveSystem(fixture).star.spectralType).toBeNull();
   });
 
   it('derives Earth and Neptune of the Solar System', () => {

@@ -16,6 +16,7 @@ const planetsEl = $('planets');
 const cardsEl = $('cards');
 const starFields = {
   name: $<HTMLInputElement>('star-name'),
+  spectralType: $<HTMLInputElement>('star-spectral'),
   teff: $<HTMLInputElement>('star-teff'),
   radius: $<HTMLInputElement>('star-radius'),
   mass: $<HTMLInputElement>('star-mass'),
@@ -94,19 +95,22 @@ function renumber(): void {
 function fillForm(input: SystemInput): void {
   const s = input.star;
   starFields.name.value = s.name ?? '';
-  starFields.teff.value = String(s.teff);
-  starFields.radius.value = String(s.radius);
-  starFields.mass.value = String(s.mass);
+  starFields.spectralType.value = s.spectralType ?? '';
+  starFields.teff.value = s.teff === undefined ? '' : String(s.teff);
+  starFields.radius.value = s.radius === undefined ? '' : String(s.radius);
+  starFields.mass.value = s.mass === undefined ? '' : String(s.mass);
   planetsEl.replaceChildren();
   input.planets.forEach((p) => addPlanetRow(p));
 }
 
 function readForm(): SystemInput {
-  const star: SystemInput['star'] = {
-    teff: num(starFields.teff),
-    radius: num(starFields.radius),
-    mass: num(starFields.mass),
-  };
+  const star: SystemInput['star'] = {};
+  const spectralType = starFields.spectralType.value.trim();
+  if (spectralType) star.spectralType = spectralType;
+  // With a spectral type, empty fields are left for the table to fill.
+  for (const k of ['teff', 'radius', 'mass'] as const) {
+    if (!spectralType || starFields[k].value.trim() !== '') star[k] = num(starFields[k]);
+  }
   if (starFields.name.value.trim()) star.name = starFields.name.value.trim();
   const planets = [...planetsEl.children].map((row): PlanetInput => {
     const f = (k: string): HTMLInputElement => row.querySelector(`[data-f="${k}"]`) as HTMLInputElement;
@@ -155,7 +159,7 @@ function renderCards(): void {
   const sys = view.system;
   const s = sys.star;
   const cards = [
-    card(s.name, s.colourCss, 'Star', [
+    card(s.name, s.colourCss, s.spectralType ? `Star · ${s.spectralType}` : 'Star', [
       ['Teff', `${fmt(s.teff, 0)} K`],
       ['Radius', `${fmt(s.radius, 2)} R☉`],
       ['Mass', `${fmt(s.mass, 2)} M☉`],

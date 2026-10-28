@@ -29,6 +29,7 @@ The library (`packages/core`), the demo (`examples/vanilla`) and the visual harn
 
 - Any derived value must be overridable by an explicit input, and an explicit input is never recomputed. The host app (Antares, `apps/shaula`) passes values it already computed.
 - Colour management matters: three r186 differs from r128 (lighting units, colour management, sRGB output). Parity with the prototype is decided by the screenshot comparison, not by the settings alone.
+- Spectral types use the Pecaut & Mamajek dwarf table (Mamajek version 2022-04-16) in `src/physics/spectral-table.ts`. Change its values only from the source table.
 - The habitable zone defaults to the prototype's approximation. Add the Kopparapu et al. 2013 model only after its coefficients are checked against the paper.
 - Only the text overlays (labels, clock, badge) are customisable, through CSS variables and the `larawag-*` classes. `destroy()` must free everything: loop, observers, GPU resources, labels, injected style.
 - No framework code, and no Angular example or snippet, in v1.

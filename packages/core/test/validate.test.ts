@@ -122,6 +122,60 @@ describe('validateSystem', () => {
   });
 });
 
+describe('validateSystem with a spectral type', () => {
+  const withStar = (star: Record<string, unknown>) => ({ star, planets: structuredClone(fixture.planets) });
+  const paths = (input: unknown) => validateSystem(input).map((i) => i.path);
+
+  it('lets the table supply teff, radius and mass', () => {
+    expect(validateSystem(withStar({ spectralType: 'G2V' }))).toEqual([]);
+  });
+
+  it('needs what the table does not have', () => {
+    const issue = find(withStar({ spectralType: 'T5V' }), 'star.mass');
+    expect(issue?.message).toBe('required, the table has no mass for T5V');
+    expect(validateSystem(withStar({ spectralType: 'T5V', mass: 0.05 }))).toEqual([]);
+  });
+
+  it('needs radius and mass for giants', () => {
+    const s = withStar({ spectralType: 'K1III', teff: 4300 });
+    expect(paths(s)).toEqual(['star.radius', 'star.mass']);
+    expect(find(s, 'star.radius')?.message).toBe('required for luminosity class III');
+  });
+
+  it('rejects text that is not a spectral type', () => {
+    expect(find(withStar({ spectralType: 'G2X' }), 'star.spectralType')?.message).toBe(
+      'must be a spectral type such as "G2V" (got "G2X")',
+    );
+    expect(find(withStar({ spectralType: 5 }), 'star.spectralType')?.message).toBe(
+      'must be a spectral type such as "G2V" (got 5)',
+    );
+  });
+
+  it('rejects types outside the table', () => {
+    expect(find(withStar({ spectralType: 'O2V' }), 'star.spectralType')?.message).toBe(
+      'must be between O3 and Y4 (got "O2V")',
+    );
+  });
+
+  it('still checks given values', () => {
+    expect(paths(withStar({ spectralType: 'G2V', teff: -5 }))).toEqual(['star.teff']);
+  });
+
+  it('keeps the old message without a spectral type', () => {
+    expect(find(withStar({ radius: 1, mass: 1 }), 'star.teff')?.message).toBe(
+      'must be a positive number (got undefined)',
+    );
+  });
+
+  it('checks the colour override', () => {
+    const s = clone();
+    s.star.colour = 'orange';
+    expect(find(s, 'star.colour')?.message).toBe('must be a hex colour such as "#ffcc88" (got "orange")');
+    s.star.colour = '#fc8';
+    expect(validateSystem(s)).toEqual([]);
+  });
+});
+
 describe('LarawagValidationError', () => {
   it('carries issues and is instanceof', () => {
     const issues = [{ path: 'star.radius', message: 'must be a positive number (got -1)' }];

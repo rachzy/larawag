@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { blackbodyColour, colourToCss } from '../src/physics.js';
+import { blackbodyColour, colourToCss, parseHexColour } from '../src/physics.js';
 
 describe('blackbodyColour', () => {
   it('cool star is red-orange', () => {
@@ -31,5 +31,16 @@ describe('blackbodyColour', () => {
 describe('colourToCss', () => {
   it('rounds channels to 0-255', () => {
     expect(colourToCss([1, 0.2, 0.5])).toBe('rgb(255,51,128)');
+  });
+});
+
+describe('parseHexColour', () => {
+  it('reads long and short hex, any case', () => {
+    expect(parseHexColour('#ff8000')).toEqual([1, 128 / 255, 0]);
+    expect(parseHexColour('#FC8')).toEqual([1, 0xcc / 255, 0x88 / 255]);
+  });
+
+  it('rejects anything else', () => {
+    for (const t of ['orange', 'ff8000', '#ff800', '#ggg', 'rgb(1,2,3)', '']) expect(parseHexColour(t)).toBeNull();
   });
 });
