@@ -36,7 +36,7 @@ export const PRESETS: Preset[] = [
     rateSlider: 1,
     options: { overlays: { badge: { text: "Artist's impression" } } },
     input: {
-      star: { name: 'Sun', teff: 5772, radius: 1, mass: 1 },
+      star: { name: 'Sun', spectralType: 'G2V', teff: 5772, radius: 1, mass: 1 },
       planets: [
         solar('Mercury', 87.969, 0.383, 0.4),
         solar('Venus', 224.701, 0.95, 1.7),
@@ -46,6 +46,25 @@ export const PRESETS: Preset[] = [
         solar('Saturn', 10755.7, 9.14, 0.9),
         solar('Uranus', 30685.4, 3.98, 2.2),
         solar('Neptune', 60189, 3.86, 3.6),
+      ],
+    },
+  },
+  {
+    id: 'trappist-1',
+    label: 'TRAPPIST-1 (star from its spectral type)',
+    rateSlider: 0.2,
+    // Only the spectral type is given; Teff, radius and mass come from the main-sequence table.
+    // Planets: Agol et al. 2021 periods (days) and radii (R⊕).
+    input: {
+      star: { name: 'TRAPPIST-1', spectralType: 'M8V' },
+      planets: [
+        { name: 'b', period: 1.5109, radius: 1.116, phase: 0.3 },
+        { name: 'c', period: 2.4218, radius: 1.097, phase: 1.4 },
+        { name: 'd', period: 4.0496, radius: 0.788, phase: 2.6 },
+        { name: 'e', period: 6.0996, radius: 0.92, phase: 3.5 },
+        { name: 'f', period: 9.2067, radius: 1.045, phase: 4.4 },
+        { name: 'g', period: 12.3529, radius: 1.129, phase: 5.2 },
+        { name: 'h', period: 18.7673, radius: 0.755, phase: 6.0 },
       ],
     },
   },

@@ -462,6 +462,15 @@ describe('createStarSystem with a renderer', () => {
     expect(v.system.planets).toEqual([]);
   });
 
+  it('runs a star given only by its spectral type, and swaps it with setSystem', () => {
+    const v = make({ star: { spectralType: 'M4V' }, planets: fixture.planets });
+    expect(v.system.star.teff).toBe(3210);
+    expect(() => step(16)).not.toThrow();
+    v.setSystem({ star: { spectralType: 'A0V', name: 'Vega-like' }, planets: fixture.planets });
+    expect(v.system.star).toMatchObject({ name: 'Vega-like', teff: 9700, spectralType: 'A0V' });
+    expect(() => step(16)).not.toThrow();
+  });
+
   it('setOverlays merges into the current config', () => {
     const v = make();
     v.setOverlays({ badge: { text: 'Hypothetisch' } });

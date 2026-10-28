@@ -38,7 +38,9 @@ Units: star in solar units (Teff in K, radius in R☉, mass in M☉); planets in
 
 | Field | Meaning |
 |---|---|
-| `star.teff`, `star.radius`, `star.mass` | Required. All must be positive numbers. |
+| `star.teff`, `star.radius`, `star.mass` | Positive numbers. Required, unless `star.spectralType` supplies them (see [Spectral types](#spectral-types)). |
+| `star.spectralType` | Optional. A spectral type such as `"G2V"`, `"K1.5 III"` or `"M4.5Ve"`. Fills a missing Teff, radius and mass from the main-sequence table. |
+| `star.colour` | Optional. Overrides the star colour, as `#rgb` or `#rrggbb`. |
 | `planet.radius` | Required. R⊕. |
 | `planet.period` or `planet.a` | One is required. Days or AU. With only `a`, the period is derived. With both, both are used as given. |
 | `planet.phase` | Radians, default 0. |
@@ -54,8 +56,43 @@ Invalid input throws a `LarawagValidationError` whose `issues` list has one `{ p
 Orbit size from Kepler's third law, `a / R*`, `Rp / R*`, orbital speed, insolation in Earth units, and equilibrium temperature. Call `deriveSystem(input)` from `@larawag/core/physics` to get these without a browser; that entry point imports neither three.js nor the DOM.
 
 - **Planet class** (rocky below 1.6 R⊕, Neptune-like from 1.6 to 4, gas giant above) is a guess from radius only.
-- **Star colour** is a blackbody approximation of Teff, softened toward white.
+- **Star colour** is a blackbody approximation of Teff, softened toward white. With only a spectral type, Teff comes from the table below, so the type sets the colour.
 - **Habitable zone** is a crude estimate from luminosity (effective fluxes 1.1 and 0.36). Pass `star.habitableZone` if you have a better value.
+
+## Spectral types
+
+`star.spectralType` takes a class letter (O, B, A, F, G, K, M, L, T or Y), a subclass from 0 to 9.5 (5 when left out) and an optional luminosity class (`Ia`, `Iab`, `Ib`, `II`, `III`, `IV`, `V`, `VI`). A space before the luminosity class, ranges such as `IV-V` and peculiarity suffixes such as `e` are accepted. Lowercase class letters and white dwarfs (`D`) are not.
+
+Teff, radius and mass come from the main-sequence table of [Pecaut & Mamajek (2013)](https://www.pas.rochester.edu/~emamajek/EEM_dwarf_UBVIJHK_colors_Teff.txt), in Mamajek's version of 2022-04-16, interpolated between subclasses. The table runs from O3V to Y4V.
+
+- A value you pass is always used as given. `teff` wins over the spectral type for physics and colour.
+- Where the table has no value (mass from L3 on, radius for most Y types), that field stays required.
+- For any luminosity class other than V or VI, `radius` and `mass` stay required, because a giant is far larger than a dwarf of the same type. Teff still comes from the dwarf table, which is a few hundred kelvin off for giants.
+
+Some rows of the table:
+
+| Type | Teff (K) | Radius (R☉) | Mass (M☉) | Looks | Stellar types |
+|---|---|---|---|---|---|
+| O5V | 41,400 | 11.45 | 43 | blue | blue main-sequence stars, blue giants and supergiants |
+| B0V | 31,400 | 7.16 | 17.7 | blue-white | blue-white main-sequence stars, blue giants and supergiants (Rigel) |
+| A0V | 9,700 | 2.193 | 2.18 | white | white main-sequence stars (Vega, Sirius A), white giants |
+| F0V | 7,220 | 1.728 | 1.61 | yellow-white | yellow-white main-sequence stars, yellow supergiants (Polaris) |
+| G2V | 5,770 | 1.012 | 1.00 | warm white | yellow dwarfs (the Sun), yellow giants (Capella) |
+| K0V | 5,270 | 0.813 | 0.88 | pale orange | orange dwarfs, red giants (Arcturus, Aldebaran) |
+| M0V | 3,850 | 0.588 | 0.57 | orange | red dwarfs, red giants, red supergiants (Betelgeuse, Antares) |
+| M5V | 3,060 | 0.196 | 0.162 | orange-red | red dwarfs (Proxima Centauri) |
+| L0V | 2,270 | 0.102 | 0.077 | deep red | the coolest red dwarfs, brown dwarfs |
+| T0V | 1,255 | 0.098 | not in table | deep red | methane brown dwarfs |
+| Y0V | 450 | 0.104 | not in table | dark red | the coolest brown dwarfs |
+
+The "Stellar types" column lists the kinds of stars commonly found with each spectral class, at any luminosity class. Larawag's values are for the main sequence (luminosity class V) only.
+
+```ts
+createStarSystem(el, {
+  star: { name: 'TRAPPIST-1', spectralType: 'M8V' },
+  planets: [{ name: 'e', period: 6.1, radius: 0.92 }],
+});
+```
 
 ## Options
 
@@ -136,7 +173,7 @@ Larawag does not load fonts.
 
 ## Examples
 
-`examples/vanilla` is a plain HTML demo with a system picker (the example K dwarf and the Solar System) and a form to edit the star and planets.
+`examples/vanilla` is a plain HTML demo with a system picker (the example K dwarf, the Solar System, and TRAPPIST-1 given only by its spectral type) and a form to edit the star and planets.
 
 ```sh
 pnpm install
@@ -178,6 +215,7 @@ In `pnpm test:visual` (SwiftShader), the library's canvas is pixel-identical to 
 - Larawag sets three's global `ColorManagement.enabled = false` when a view is created, which affects other three code on the same page.
 - The planet shading patch depends on the exact shader text of three 0.186.x, which is why the peer range is `>=0.186.0 <0.187.0`. If the text changes, creating a view throws a clear error instead of rendering wrong.
 - The styles are injected into `document.head`, so a view inside a shadow root is not supported yet.
+- Spectral types use the main-sequence table only: giants get a dwarf's Teff, and white dwarfs are not supported.
 - At true scale on very wide systems, the camera cannot zoom closer than the minimum distance scaled to fit the system (for the Solar System, the Sun stays a few pixels across).
 
 ## TO-DO
