@@ -72,6 +72,16 @@ describe('validateSystem', () => {
     expect(find(s, 'planets[0].planetClass')).toBeDefined();
     s.planets[0].planetClass = 'gas-giant';
     expect(validateSystem(s)).toEqual([]);
+    s.planets[0].planetClass = 'ocean-world';
+    expect(validateSystem(s)).toEqual([]);
+  });
+
+  it('lists every planet class in the message', () => {
+    const s = clone();
+    s.planets[0].planetClass = 'lava';
+    expect(find(s, 'planets[0].planetClass')?.message).toBe(
+      'must be one of rocky, neptune-like, gas-giant, ocean-world (got "lava")',
+    );
   });
 
   it('rejects non-array planets and accepts empty', () => {
