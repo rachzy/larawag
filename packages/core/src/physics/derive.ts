@@ -1,5 +1,5 @@
 import { DEFAULT_ALBEDO } from './constants.js';
-import { blackbodyColour, colourToCss } from './colour.js';
+import { blackbodyColour, colourToCss, parseHexColour } from './colour.js';
 import { classifyPlanet } from './classify.js';
 import { habitableZone } from './habitable-zone.js';
 import {
@@ -11,7 +11,8 @@ import {
   semiMajorAxisAu,
   starLuminosity,
 } from './kepler.js';
-import type { PlanetClass, SystemInput } from './types.js';
+import { parseSpectralType, spectralProperties } from './spectral.js';
+import type { PlanetClass, StarInput, SystemInput } from './types.js';
 import { LarawagValidationError, validateSystem } from './validate.js';
 
 /** A planet with every quantity the renderer and labels need. */
@@ -39,6 +40,8 @@ export interface DerivedPlanet {
 export interface DerivedSystem {
   star: {
     name: string;
+    /** As given, or null. */
+    spectralType: string | null;
     teff: number;
     radius: number;
     mass: number;
@@ -55,6 +58,17 @@ const PALETTE = ['#c8a27a', '#7fb7d9', '#9fc08a', '#c98f9f', '#b8a6d9', '#d9c27f
 
 const defaultName = (i: number) => (i < 25 ? String.fromCharCode(98 + i) : `planet ${i + 1}`);
 
+/** Teff, radius and mass as given, filled from the spectral type where missing. Expects validated input. */
+function resolveStar(s: StarInput): { teff: number; radius: number; mass: number } {
+  const parsed = s.spectralType === undefined ? null : parseSpectralType(s.spectralType);
+  const table = parsed ? spectralProperties(parsed) : null;
+  return {
+    teff: s.teff ?? table!.teff,
+    radius: s.radius ?? table!.radius!,
+    mass: s.mass ?? table!.mass!,
+  };
+}
+
 /**
  * Validates a system description and fills in everything derived from it.
  * Overrides in the input are returned verbatim. Throws `LarawagValidationError`.
@@ -63,9 +77,10 @@ export function deriveSystem(input: SystemInput): DerivedSystem {
   const issues = validateSystem(input);
   if (issues.length) throw new LarawagValidationError(issues);
 
-  const s = input.star;
+  const given = input.star;
+  const s = { ...given, ...resolveStar(given) };
   const luminosity = s.luminosity ?? starLuminosity(s.teff, s.radius);
-  const colour = blackbodyColour(s.teff);
+  const colour = (s.colour === undefined ? null : parseHexColour(s.colour)) ?? blackbodyColour(s.teff);
 
   const planets = input.planets.map((p, i): DerivedPlanet => {
     const aAu = p.a ?? semiMajorAxisAu(s.mass, p.period as number);
@@ -90,6 +105,7 @@ export function deriveSystem(input: SystemInput): DerivedSystem {
   return {
     star: {
       name: s.name ?? 'Star',
+      spectralType: s.spectralType ?? null,
       teff: s.teff,
       radius: s.radius,
       mass: s.mass,
