@@ -1,4 +1,5 @@
 import { Group } from 'three';
+import { AU_PER_RSUN } from '../physics/constants.js';
 import type { Mesh } from 'three';
 import type { DerivedPlanet, DerivedSystem } from '../physics/derive.js';
 import { createHzMesh, type HzPiece } from './hz-mesh.js';
@@ -14,9 +15,16 @@ export interface SystemBody {
   orbitRadius: number;
 }
 
+/** Distance between two stars in compressed scale, scene units: inside the innermost possible orbit (5). */
+export const BINARY_SCENE_SEPARATION = 3.2;
+
 /** Star, planets, orbits and habitable zone for one system, under a single group. */
 export interface SystemScene {
   root: Group;
+  /** One star, or two circling their centre of mass. */
+  stars: StarPiece[];
+  /** Moves the stars of a binary to their places after `days`; no-op for one star. */
+  setTime(days: number): void;
   bodies: SystemBody[];
   /** Largest orbit radius in scene units (0 without planets). */
   outerOrbit: number;
@@ -34,8 +42,13 @@ export function buildSystemScene(
   planetStyle: PlanetStyle = 'inferred',
 ): SystemScene {
   const root = new Group();
-  const star: StarPiece = createStar(system.star.colour);
-  root.add(star.object);
+  const stars: StarPiece[] = system.stars.map((st, i) => createStar(st.colour, i === 0));
+  for (const st of stars) root.add(st.object);
+  const binary = system.binary;
+  const unit = system.stars[0]!.radius;
+  const largest = Math.max(...system.stars.map((st) => st.radius));
+  // Each star's distance from the centre of mass, scene units, for the current mode.
+  let offsets: number[] = [0];
   const planets: PlanetPiece[] = [];
   const orbits: OrbitPiece[] = [];
   const bodies: SystemBody[] = system.planets.map((planet) => {
@@ -53,10 +66,29 @@ export function buildSystemScene(
     root,
     bodies,
     outerOrbit: 0,
+    stars,
+    setTime(days) {
+      if (!binary) return;
+      const th = binary.phase + (2 * Math.PI * days) / binary.periodDays;
+      stars.forEach((st, i) => {
+        const r = (i === 0 ? -1 : 1) * offsets[i]!;
+        st.object.position.set(r * Math.cos(th), 0, r * Math.sin(th));
+      });
+    },
     applyScale(m) {
       const s = starScene(m);
-      star.mesh.scale.setScalar(s.starRadius);
-      star.glow.scale.setScalar(s.glowScale);
+      stars.forEach((st, i) => {
+        const radius = system.stars[i]!.radius;
+        // Two stars in compressed scale shrink to fit inside the innermost orbit.
+        const k = !binary ? 1 : m === 'compressed' ? 0.6 * Math.sqrt(radius / largest) : radius / unit;
+        st.mesh.scale.setScalar(s.starRadius * k);
+        st.glow.scale.setScalar(s.glowScale * k);
+      });
+      offsets = !binary
+        ? [0]
+        : binary.distances.map((d) =>
+            m === 'compressed' ? (BINARY_SCENE_SEPARATION * d) / binary.separation : (d * AU_PER_RSUN) / unit,
+          );
       let outer = 0;
       bodies.forEach((b, i) => {
         b.orbitRadius = orbitRadius(m, b.planet.aAu, b.planet.aOverRs);
@@ -81,7 +113,7 @@ export function buildSystemScene(
     dispose() {
       root.removeFromParent();
       root.clear();
-      star.dispose();
+      for (const st of stars) st.dispose();
       for (const p of planets) p.dispose();
       for (const o of orbits) o.dispose();
       hz?.dispose();
@@ -90,5 +122,6 @@ export function buildSystemScene(
     },
   };
   scene.applyScale(mode);
+  scene.setTime(0);
   return scene;
 }
