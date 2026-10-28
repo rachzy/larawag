@@ -1,5 +1,5 @@
 import { createStarSystem, type StarSystemView } from '@larawag/core';
-import { LarawagValidationError, type PlanetInput, type SystemInput } from '@larawag/core/physics';
+import { LarawagValidationError, type PlanetClass, type PlanetInput, type SystemInput } from '@larawag/core/physics';
 import { PRESETS, type Preset } from './systems.js';
 
 const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) as T;
@@ -65,6 +65,13 @@ function addPlanetRow(p: PlanetInput = { radius: 1, period: 10 }): void {
         </span>
       </label>
       <label>Radius (R⊕) <input type="number" step="any" inputmode="decimal" data-f="radius" aria-label="Planet ${n} radius"></label>
+      <label>Type
+        <select data-f="class" aria-label="Planet ${n} type">
+          <option value="">Guess from size</option><option value="rocky">Rocky</option>
+          <option value="neptune-like">Neptune-like</option><option value="gas-giant">Gas giant</option>
+          <option value="ocean-world">Ocean world</option>
+        </select>
+      </label>
       <label>Phase (rad) <input type="number" step="any" inputmode="decimal" data-f="phase" aria-label="Planet ${n} phase"></label>
       <button type="button" data-f="remove" aria-label="Remove planet ${n}">Remove</button>
     </div>`;
@@ -73,6 +80,7 @@ function addPlanetRow(p: PlanetInput = { radius: 1, period: 10 }): void {
   f<HTMLSelectElement>('kind').value = useA ? 'a' : 'period';
   f<HTMLInputElement>('orbit').value = String(useA ? p.a : p.period ?? '');
   f<HTMLInputElement>('radius').value = String(p.radius);
+  f<HTMLSelectElement>('class').value = p.planetClass ?? '';
   f<HTMLInputElement>('phase').value = String(p.phase ?? 0);
   f<HTMLButtonElement>('remove').addEventListener('click', () => {
     row.remove();
@@ -121,6 +129,8 @@ function readForm(): SystemInput {
     if (!Number.isNaN(phase)) p.phase = phase;
     const name = f('name').value.trim();
     if (name) p.name = name;
+    const planetClass = (row.querySelector('[data-f="class"]') as HTMLSelectElement).value;
+    if (planetClass) p.planetClass = planetClass as PlanetClass;
     return p;
   });
   return { star, planets };
@@ -154,6 +164,9 @@ function card(title: string, colour: string, kind: string, rows: [string, string
 const fmt = (x: number, digits: number): string =>
   x >= 1e5 ? x.toExponential(2) : x.toFixed(digits);
 
+const classGiven = (i: number): boolean =>
+  (planetsEl.children[i]?.querySelector('[data-f="class"]') as HTMLSelectElement | null)?.value !== '';
+
 function renderCards(): void {
   if (!view) return;
   const sys = view.system;
@@ -166,8 +179,8 @@ function renderCards(): void {
       ['Luminosity', `${fmt(s.luminosity, 3)} L☉`],
       ['Habitable zone', `${fmt(sys.habitableZone.inner, 2)} – ${fmt(sys.habitableZone.outer, 2)} AU`],
     ]),
-    ...sys.planets.map((p) =>
-      card(p.name, p.colour, `${p.planetClass} (a guess from size)`, [
+    ...sys.planets.map((p, i) =>
+      card(p.name, p.colour, classGiven(i) ? p.planetClass : `${p.planetClass} (a guess from size)`, [
         ['Period', `${fmt(p.periodDays, 1)} d`],
         ['Radius', `${fmt(p.radiusEarth, 2)} R⊕`],
         ['Orbit', `${fmt(p.aAu, 3)} AU`],

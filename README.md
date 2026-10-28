@@ -48,10 +48,11 @@ Units: star in solar units (Teff in K, radius in R☉, mass in M☉); planets in
 | `planet.radius` | Required. R⊕. |
 | `planet.period` or `planet.a` | One is required. Days or AU. With only `a`, the period is derived. With both, both are used as given. |
 | `planet.phase` | Radians, default 0. |
+| `planet.planetClass` | Optional. `'rocky'`, `'neptune-like'`, `'gas-giant'` or `'ocean-world'`. Without it the class is guessed from radius (see below); an ocean world is never guessed. |
 | `planet.albedo` | Bond albedo for the equilibrium temperature, default 0.3. |
 | `name`, `planet.seed` | Optional. Unnamed planets are labelled b, c, d… up to z, then `planet 26`, `planet 27`… The seed fixes the texture; the default is `11 + 5 × index`. |
 
-Every derived value can be overridden, and an override is never recomputed: `star.luminosity`, `star.habitableZone` (`{ inner, outer }` in AU), and per planet `aOverRs`, `rpOverRs`, `velocity` (km/s), `insolation`, `teq` and `planetClass`.
+Every derived value can be overridden, and an override is never recomputed: `star.luminosity`, `star.habitableZone` (`{ inner, outer }` in AU), and per planet `aOverRs`, `rpOverRs`, `velocity` (km/s), `insolation` and `teq`.
 
 Invalid input throws a `LarawagValidationError` whose `issues` list has one `{ path, message }` per problem, for example `planets[1].radius: must be a positive number (got -2)`.
 
@@ -59,7 +60,7 @@ Invalid input throws a `LarawagValidationError` whose `issues` list has one `{ p
 
 Orbit size from Kepler's third law, `a / R*`, `Rp / R*`, orbital speed, insolation in Earth units, and equilibrium temperature. Call `deriveSystem(input)` from `@larawag/core/physics` to get these without a browser; that entry point imports neither three.js nor the DOM.
 
-- **Planet class** (rocky below 1.6 R⊕, Neptune-like from 1.6 to 4, gas giant above) is a guess from radius only.
+- **Planet class** is a guess from radius only: rocky below 1.6 R⊕ (few planets above that size are rocky, Rogers 2015), Neptune-like from 1.6 to 6 R⊕, gas giant from 6 R⊕ (the Kepler size bins of Borucki et al. 2011). Radius cannot tell water from rock, so `ocean-world` is only used when you pass it.
 - **Star colour** is a blackbody approximation of Teff, softened toward white. With only a spectral type, Teff comes from the table below, so the type sets the colour.
 - **Habitable zone** is a crude estimate from luminosity (effective fluxes 1.1 and 0.36). Pass `star.habitableZone` if you have a better value.
 
@@ -202,7 +203,7 @@ Run `pnpm --filter @larawag/visual exec playwright install chromium` once before
 The scene is the one from the "Star System Preview" prototype. Kept as it was:
 
 - The star: a limb-darkened sphere with an additive glow sprite, both tinted by the blackbody colour of Teff.
-- Planets: seeded procedural textures (blotches for rocky planets, bands for Neptune-like planets and gas giants), and an orange emissive glow for planets hotter than 700 K.
+- Planets: seeded procedural textures (blotches for rocky planets, bands for Neptune-like planets and gas giants, blue blotches under white cloud streaks for ocean worlds), and an orange emissive glow for planets hotter than 700 K.
 - One unit-circle orbit line per planet, in the planet's colour, and a translucent habitable-zone ring.
 - About 1800 background stars, placed from a fixed seed.
 - Compressed scale (default): the star has radius 2, an orbit of `a` AU has radius `5 + 8 ln(1 + a / 0.05)`, and planet size grows slowly with radius (`0.35 + 0.18 Rp^0.6`, Rp in R⊕). True scale: the star has radius 1, and orbits and planets use `a / R*` and `Rp / R*`.
