@@ -26,13 +26,16 @@ function serveR128(): Plugin {
   };
 }
 
-const core = (file: string): string => fileURLToPath(new URL(`../../packages/core/src/${file}`, import.meta.url));
+const pkg = (file: string): string => fileURLToPath(new URL(`../../packages/${file}`, import.meta.url));
 
 export default defineConfig({
   root: dirname(fileURLToPath(import.meta.url)),
   plugins: [serveR128()],
   resolve: {
-    alias: [{ find: /^@larawag\/core$/, replacement: core('index.ts') }],
+    alias: [
+      { find: /^@larawag\/core$/, replacement: pkg('core/src/index.ts') },
+      { find: /^@larawag\/react$/, replacement: pkg('react/src/index.ts') },
+    ],
   },
   server: { strictPort: false },
   logLevel: 'warn',

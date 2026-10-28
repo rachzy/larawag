@@ -4,6 +4,6 @@
   "scripts": {
     "build": "pnpm -r build",
     "test": "pnpm -r test",
-    "test:visual": "pnpm --filter @larawag/visual compare && pnpm --filter @larawag/visual lifecycle"
+    "test:visual": "pnpm --filter @larawag/visual compare && pnpm --filter @larawag/visual lifecycle && pnpm --filter @larawag/visual react"
   }
 }
