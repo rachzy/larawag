@@ -1,3 +1,4 @@
+import { isTexturePreset, TEXTURE_PRESETS } from './appearance.js';
 import { parseHexColour } from './colour.js';
 import { parseSpectralType, spectralProperties, type SpectralProperties } from './spectral.js';
 import type { ValidationIssue } from './types.js';
@@ -39,10 +40,15 @@ function checkStarBasics(star: Record<string, unknown>, add: Add, positive: Posi
     else if (k !== 'teff' && !parsed.dwarf) add(`star.${k}`, `required for luminosity class ${parsed.luminosityClass}`);
     else if (table[k] === undefined) add(`star.${k}`, `required, the table has no ${k} for ${spec as string}`);
   }
-  const colour = star.colour;
-  if (colour !== undefined && (typeof colour !== 'string' || !parseHexColour(colour)))
-    add('star.colour', `must be a hex colour such as "#ffcc88" (got ${show(colour)})`);
+  checkColour(star.colour, 'star.colour', add);
 }
+
+function checkColour(colour: unknown, path: string, add: Add): void {
+  if (colour !== undefined && (typeof colour !== 'string' || !parseHexColour(colour)))
+    add(path, `must be a hex colour such as "#ffcc88" (got ${show(colour)})`);
+}
+
+const IMAGE_URL = /^(https?:\/\/|\.{0,2}\/|data:image\/|blob:)/;
 
 /** Checks a system description. Returns every issue found; an empty list means valid. Never throws. */
 export function validateSystem(input: unknown): ValidationIssue[] {
@@ -102,6 +108,10 @@ export function validateSystem(input: unknown): ValidationIssue[] {
       add(`${prefix}albedo`, `must be a number in [0, 1) (got ${show(p.albedo)})`);
     if (p.planetClass !== undefined && !CLASSES.includes(p.planetClass as string))
       add(`${prefix}planetClass`, `must be one of ${CLASSES.join(', ')} (got ${show(p.planetClass)})`);
+    const t = p.texture;
+    if (t !== undefined && !isTexturePreset(t) && !(typeof t === 'string' && IMAGE_URL.test(t)))
+      add(`${prefix}texture`, `must be one of ${TEXTURE_PRESETS.join(', ')}, or an image URL (got ${show(t)})`);
+    checkColour(p.colour, `${prefix}colour`, add);
   });
   return issues;
 }

@@ -43,6 +43,10 @@ export interface PlanetInput {
   planetClass?: PlanetClass;
   /** Texture seed. */
   seed?: number;
+  /** A preset look (`'mercury'` … `'neptune'`) or an image URL. Default: inferred from class and temperature. */
+  texture?: string;
+  /** Surface colour as `#rgb` or `#rrggbb`; replaces the palette and keeps the pattern. */
+  colour?: string;
 }
 
 /** A star and its planets (possibly none). */

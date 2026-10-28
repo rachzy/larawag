@@ -1,17 +1,9 @@
 import { CanvasTexture } from 'three';
 import type { PlanetClass } from '../physics/types.js';
+import { rng } from '../physics/random.js';
 import { RENDER_TUNABLES } from './renderer-setup.js';
 
-/** Seeded PRNG (mulberry32), as in the prototype. */
-export function rng(seed: number): () => number {
-  return function () {
-    seed |= 0;
-    seed = (seed + 0x6d2b79f5) | 0;
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
+export { rng };
 
 function context2d(c: HTMLCanvasElement): CanvasRenderingContext2D {
   const x = c.getContext('2d');

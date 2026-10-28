@@ -1,3 +1,4 @@
+import { planetAppearance, type PlanetAppearance } from './appearance.js';
 import { DEFAULT_ALBEDO } from './constants.js';
 import { blackbodyColour, colourToCss, parseHexColour } from './colour.js';
 import { classifyPlanet } from './classify.js';
@@ -18,8 +19,10 @@ import { LarawagValidationError, validateSystem } from './validate.js';
 /** A planet with every quantity the renderer and labels need. */
 export interface DerivedPlanet {
   name: string;
-  /** CSS hex colour. */
+  /** Orbit line and label colour, CSS hex. */
   colour: string;
+  /** How the surface is painted. */
+  appearance: PlanetAppearance;
   aAu: number;
   periodDays: number;
   aOverRs: number;
@@ -85,6 +88,9 @@ export function deriveSystem(input: SystemInput): DerivedSystem {
   const planets = input.planets.map((p, i): DerivedPlanet => {
     const aAu = p.a ?? semiMajorAxisAu(s.mass, p.period as number);
     const periodDays = p.period ?? periodDaysFromAu(s.mass, aAu);
+    const teq = p.teq ?? equilibriumTemp(s.teff, s.radius, aAu, p.albedo ?? DEFAULT_ALBEDO);
+    const planetClass = p.planetClass ?? classifyPlanet(p.radius);
+    const seed = p.seed ?? 11 + i * 5;
     return {
       name: p.name ?? defaultName(i),
       colour: PALETTE[i % PALETTE.length]!,
@@ -94,11 +100,12 @@ export function deriveSystem(input: SystemInput): DerivedSystem {
       rpOverRs: p.rpOverRs ?? rpOverRs(p.radius, s.radius),
       velocityKmS: p.velocity ?? orbitalSpeedKmS(s.mass, aAu),
       insolation: p.insolation ?? luminosity / (aAu * aAu),
-      teq: p.teq ?? equilibriumTemp(s.teff, s.radius, aAu, p.albedo ?? DEFAULT_ALBEDO),
-      planetClass: p.planetClass ?? classifyPlanet(p.radius),
+      teq,
+      planetClass,
       radiusEarth: p.radius,
       phase: p.phase ?? 0,
-      seed: p.seed ?? 11 + i * 5,
+      seed,
+      appearance: planetAppearance({ planetClass, teq, seed, texture: p.texture, colour: p.colour }),
     };
   });
 

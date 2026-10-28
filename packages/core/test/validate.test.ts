@@ -132,6 +132,34 @@ describe('validateSystem', () => {
   });
 });
 
+describe('validateSystem planet look', () => {
+  it('accepts presets and image URLs', () => {
+    for (const t of ['jupiter', 'https://example.com/a.png', 'http://x.y/z.jpg', '/maps/a.png', './a.png', '../a.png', 'data:image/png;base64,AAAA', 'blob:https://x/1']) {
+      const s = clone();
+      s.planets[0].texture = t;
+      expect(validateSystem(s)).toEqual([]);
+    }
+  });
+
+  it('rejects other textures', () => {
+    const s = clone();
+    s.planets[0].texture = 'pluto';
+    expect(find(s, 'planets[0].texture')?.message).toBe(
+      'must be one of mercury, venus, earth, mars, jupiter, saturn, uranus, neptune, or an image URL (got "pluto")',
+    );
+    s.planets[0].texture = 3;
+    expect(find(s, 'planets[0].texture')).toBeDefined();
+  });
+
+  it('checks the colour', () => {
+    const s = clone();
+    s.planets[1].colour = 'blue';
+    expect(find(s, 'planets[1].colour')?.message).toBe('must be a hex colour such as "#ffcc88" (got "blue")');
+    s.planets[1].colour = '#36c';
+    expect(validateSystem(s)).toEqual([]);
+  });
+});
+
 describe('validateSystem with a spectral type', () => {
   const withStar = (star: Record<string, unknown>) => ({ star, planets: structuredClone(fixture.planets) });
   const paths = (input: unknown) => validateSystem(input).map((i) => i.path);
