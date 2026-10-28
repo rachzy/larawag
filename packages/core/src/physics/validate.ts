@@ -27,21 +27,35 @@ export class LarawagValidationError extends Error {
 type Add = (path: string, message: string) => void;
 type Positive = (o: Record<string, unknown>, key: string, prefix: string, required: boolean) => void;
 
-function checkStarBasics(star: Record<string, unknown>, add: Add, positive: Positive): void {
+function checkStar(star: Record<string, unknown>, at: string, add: Add, positive: Positive): void {
+  const prefix = `${at}.`;
   const spec = star.spectralType;
   const parsed = typeof spec === 'string' ? parseSpectralType(spec) : null;
   let table: SpectralProperties | null = null;
   if (spec !== undefined) {
-    if (!parsed) add('star.spectralType', `must be a spectral type such as "G2V" (got ${show(spec)})`);
-    else if (!(table = spectralProperties(parsed))) add('star.spectralType', `must be between O3 and Y4 (got ${show(spec)})`);
+    if (!parsed) add(`${prefix}spectralType`, `must be a spectral type such as "G2V" (got ${show(spec)})`);
+    else if (!(table = spectralProperties(parsed))) add(`${prefix}spectralType`, `must be between O3 and Y4 (got ${show(spec)})`);
   }
   for (const k of ['teff', 'radius', 'mass'] as const) {
-    if (star[k] !== undefined || spec === undefined) positive(star, k, 'star.', true);
+    if (star[k] !== undefined || spec === undefined) positive(star, k, prefix, true);
     else if (!parsed || !table) continue;
-    else if (k !== 'teff' && !parsed.dwarf) add(`star.${k}`, `required for luminosity class ${parsed.luminosityClass}`);
-    else if (table[k] === undefined) add(`star.${k}`, `required, the table has no ${k} for ${spec as string}`);
+    else if (k !== 'teff' && !parsed.dwarf) add(`${prefix}${k}`, `required for luminosity class ${parsed.luminosityClass}`);
+    else if (table[k] === undefined) add(`${prefix}${k}`, `required, the table has no ${k} for ${spec as string}`);
   }
-  checkColour(star.colour, 'star.colour', add);
+  checkColour(star.colour, `${prefix}colour`, add);
+  positive(star, 'luminosity', prefix, false);
+}
+
+function checkHabitableZone(hz: unknown, path: string, add: Add, positive: Positive): void {
+  if (hz === undefined) return;
+  if (!isObject(hz)) {
+    add(path, 'must be an object with inner and outer');
+    return;
+  }
+  positive(hz, 'inner', `${path}.`, true);
+  positive(hz, 'outer', `${path}.`, true);
+  if (isNum(hz.inner) && isNum(hz.outer) && hz.inner >= hz.outer)
+    add(path, `inner must be less than outer (got ${hz.inner} and ${hz.outer})`);
 }
 
 function checkColour(colour: unknown, path: string, add: Add): void {
@@ -88,24 +102,34 @@ export function validateSystem(input: unknown): ValidationIssue[] {
     return issues;
   }
 
-  const star = input.star;
-  if (!isObject(star)) {
-    add('star', 'must be an object');
-  } else {
-    checkStarBasics(star, add, positive);
-    positive(star, 'luminosity', 'star.', false);
-    const hz = star.habitableZone;
-    if (hz !== undefined) {
-      if (!isObject(hz)) {
-        add('star.habitableZone', 'must be an object with inner and outer');
-      } else {
-        positive(hz, 'inner', 'star.habitableZone.', true);
-        positive(hz, 'outer', 'star.habitableZone.', true);
-        if (isNum(hz.inner) && isNum(hz.outer) && hz.inner >= hz.outer)
-          add('star.habitableZone', `inner must be less than outer (got ${hz.inner} and ${hz.outer})`);
+  const { star, stars, binary } = input;
+  if (stars !== undefined) {
+    if (star !== undefined) add('stars', 'give either star or stars, not both');
+    else if (!Array.isArray(stars) || stars.length !== 2)
+      add('stars', `must list exactly 2 stars (got ${Array.isArray(stars) ? stars.length : show(stars)})`);
+    else
+      stars.forEach((s, i) => {
+        const at = `stars[${i}]`;
+        if (!isObject(s)) return add(at, 'must be an object');
+        checkStar(s, at, add, positive);
+        if (s.habitableZone !== undefined) add(`${at}.habitableZone`, 'use binary.habitableZone with two stars');
+      });
+    if (binary !== undefined) {
+      if (!isObject(binary)) add('binary', 'must be an object');
+      else {
+        positive(binary, 'separation', 'binary.', false);
+        if (binary.phase !== undefined && !isNum(binary.phase))
+          add('binary.phase', `must be a finite number (got ${show(binary.phase)})`);
+        checkHabitableZone(binary.habitableZone, 'binary.habitableZone', add, positive);
       }
     }
+  } else if (!isObject(star)) {
+    add('star', 'must be an object');
+  } else {
+    checkStar(star, 'star', add, positive);
+    checkHabitableZone(star.habitableZone, 'star.habitableZone', add, positive);
   }
+  if (stars === undefined && binary !== undefined) add('binary', 'only with stars');
 
   const planets = input.planets;
   if (!Array.isArray(planets)) {
