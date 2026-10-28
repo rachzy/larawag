@@ -1,5 +1,12 @@
 import { createStarSystem, type StarSystemView } from '@larawag/core';
-import { LarawagValidationError, type PlanetClass, type PlanetInput, type SystemInput } from '@larawag/core/physics';
+import {
+  LarawagValidationError,
+  TEXTURE_PRESETS,
+  type PlanetAppearance,
+  type PlanetClass,
+  type PlanetInput,
+  type SystemInput,
+} from '@larawag/core/physics';
 import { PRESETS, type Preset } from './systems.js';
 
 const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) as T;
@@ -28,6 +35,10 @@ let hzOn = true;
 const debug = new URLSearchParams(location.search).has('debug');
 
 for (const p of PRESETS) presetSel.add(new Option(p.label, p.id));
+const presetList = document.createElement('datalist');
+presetList.id = 'texture-presets';
+for (const t of TEXTURE_PRESETS) presetList.append(new Option(t));
+document.body.append(presetList);
 
 function setPressed(btn: HTMLButtonElement, pressed: boolean, text: string): void {
   btn.setAttribute('aria-pressed', String(pressed));
@@ -72,6 +83,8 @@ function addPlanetRow(p: PlanetInput = { radius: 1, period: 10 }): void {
           <option value="ocean-world">Ocean world</option>
         </select>
       </label>
+      <label>Texture <input type="text" list="texture-presets" data-f="texture" placeholder="inferred" aria-label="Planet ${n} texture: a preset or an image URL"></label>
+      <label>Colour <input type="text" data-f="colour" placeholder="inferred" aria-label="Planet ${n} colour as #rrggbb"></label>
       <label>Phase (rad) <input type="number" step="any" inputmode="decimal" data-f="phase" aria-label="Planet ${n} phase"></label>
       <button type="button" data-f="remove" aria-label="Remove planet ${n}">Remove</button>
     </div>`;
@@ -81,6 +94,8 @@ function addPlanetRow(p: PlanetInput = { radius: 1, period: 10 }): void {
   f<HTMLInputElement>('orbit').value = String(useA ? p.a : p.period ?? '');
   f<HTMLInputElement>('radius').value = String(p.radius);
   f<HTMLSelectElement>('class').value = p.planetClass ?? '';
+  f<HTMLInputElement>('texture').value = p.texture ?? '';
+  f<HTMLInputElement>('colour').value = p.colour ?? '';
   f<HTMLInputElement>('phase').value = String(p.phase ?? 0);
   f<HTMLButtonElement>('remove').addEventListener('click', () => {
     row.remove();
@@ -131,6 +146,10 @@ function readForm(): SystemInput {
     if (name) p.name = name;
     const planetClass = (row.querySelector('[data-f="class"]') as HTMLSelectElement).value;
     if (planetClass) p.planetClass = planetClass as PlanetClass;
+    const texture = f('texture').value.trim();
+    if (texture) p.texture = texture;
+    const colour = f('colour').value.trim();
+    if (colour) p.colour = colour;
     return p;
   });
   return { star, planets };
@@ -164,6 +183,9 @@ function card(title: string, colour: string, kind: string, rows: [string, string
 const fmt = (x: number, digits: number): string =>
   x >= 1e5 ? x.toExponential(2) : x.toFixed(digits);
 
+const lookText = (a: PlanetAppearance): string =>
+  a.imageUrl ? 'image' : a.preset ? `${a.preset} preset` : a.inferred ? `${a.pattern}, guessed from type and Teq` : `${a.pattern}, given colour`;
+
 const classGiven = (i: number): boolean =>
   (planetsEl.children[i]?.querySelector('[data-f="class"]') as HTMLSelectElement | null)?.value !== '';
 
@@ -188,6 +210,7 @@ function renderCards(): void {
         ['Orbital speed', `${fmt(p.velocityKmS, 1)} km/s`],
         ['Insolation', `${fmt(p.insolation, 2)} S⊕`],
         ['Teq', `${fmt(p.teq, 0)} K`],
+        ['Look', lookText(p.appearance)],
       ]),
     ),
   ];

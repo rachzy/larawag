@@ -8,9 +8,9 @@ Framework-agnostic three.js library that renders a hypothetical single-star plan
 
 The library (`packages/core`), the demo (`examples/vanilla`) and the visual harness (`tools/visual`) exist; design notes and plans live in the git-ignored `tmp/plans/`.
 
-- The visual spec is the "Star System Preview" prototype (single HTML page, three r128 UMD). The library must reproduce its canvas without visible change. Planets, scale modes, camera presets and the starfield are defined by that page and the kickoff prompt; do not restyle the 3D scene.
+- The visual spec is the "Star System Preview" prototype (single HTML page, three r128 UMD). With `planetStyle: 'prototype'` the library must reproduce its canvas without visible change; the default `'inferred'` style changes only planet colours (decided by Henrique, 2026-10-28). Planets, scale modes, camera presets and the starfield are defined by that page and the kickoff prompt; do not restyle the 3D scene.
 - Single-star systems only. Circular, coplanar orbits. No moons, binaries, planet picking or framework wrappers in v1.
-- Everything drawn is hypothetical; never imply known composition or surface. Planet class is a guess from radius, and the docs say so.
+- Everything drawn is hypothetical; never imply known composition or surface. Planet class is a guess from radius and planet colours a guess from class and Teq (`src/physics/appearance.ts`), and the docs say so.
 
 ## Workspace layout
 

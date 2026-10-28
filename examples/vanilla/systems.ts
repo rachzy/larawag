@@ -15,6 +15,7 @@ const solar = (name: string, period: number, radius: number, phase: number) => (
   period,
   radius,
   phase,
+  texture: name.toLowerCase(),
 });
 
 export const PRESETS: Preset[] = [
