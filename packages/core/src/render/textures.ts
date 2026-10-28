@@ -1,5 +1,6 @@
 import { CanvasTexture } from 'three';
 import type { PlanetAppearance, Rgb, TexturePattern } from '../physics/appearance.js';
+import type { DerivedRings } from '../physics/rings.js';
 import type { PlanetClass } from '../physics/types.js';
 import { rng } from '../physics/random.js';
 import { RENDER_TUNABLES } from './renderer-setup.js';
@@ -125,6 +126,31 @@ const PROTOTYPE: Record<PlanetClass, Pick<PlanetAppearance, 'pattern' | 'palette
 /** The prototype's procedural surface for a class and seed (the `'prototype'` planet style). Needs a DOM canvas. */
 export function planetTexture(kind: PlanetClass, seed: number): CanvasTexture {
   return appearanceTexture({ ...PROTOTYPE[kind], seed, polarCaps: false, darkSpot: false, preset: null, imageUrl: null, inferred: true });
+}
+
+const RING_GAP: [number, number] = [1.95, 2.02];
+
+/**
+ * A 256x4 strip of ring opacity from the inner edge (left) to the outer edge (right): seeded
+ * ringlets and a Cassini-like gap at 1.95 to 2.02 planet radii. White; the material adds colour.
+ */
+export function ringTexture(r: DerivedRings): CanvasTexture {
+  const c = document.createElement('canvas');
+  c.width = 256;
+  c.height = 4;
+  const x = context2d(c);
+  const rand = rng(r.seed);
+  let band = 0.7;
+  for (let i = 0; i < 256; i++) {
+    if (rand() < 0.08) band = 0.45 + rand() * 0.55;
+    const radius = r.inner + ((i + 0.5) / 256) * (r.outer - r.inner);
+    const inGap = radius >= RING_GAP[0] && radius <= RING_GAP[1];
+    x.fillStyle = 'rgba(255,255,255,' + (inGap ? 0.04 : band * (0.85 + rand() * 0.15)) + ')';
+    x.fillRect(i, 0, 1, 4);
+  }
+  const tex = new CanvasTexture(c);
+  tex.colorSpace = RENDER_TUNABLES.textureColorSpace;
+  return tex;
 }
 
 /** The white radial-gradient glow sprite texture. Needs a DOM canvas. */

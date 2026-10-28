@@ -2,7 +2,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { planetAppearance, TEXTURE_PRESETS, type PlanetAppearance } from '../src/physics/appearance.js';
 import type { PlanetClass } from '../src/physics/types.js';
-import { appearanceTexture, planetTexture } from '../src/render/textures.js';
+import { ringDefaults } from '../src/physics/rings.js';
+import { appearanceTexture, planetTexture, ringTexture } from '../src/render/textures.js';
 
 let ops: string[];
 
@@ -72,5 +73,32 @@ describe('appearanceTexture', () => {
   it('paints with the given colour', () => {
     const a: PlanetAppearance = planetAppearance({ planetClass: 'rocky', teq: 300, seed: 2, colour: '#ff0000' });
     expect(record(() => appearanceTexture(a))[0]).toBe('fill rgb(255,0,0)');
+  });
+});
+
+describe('ringTexture', () => {
+  const rings = (inner: number, outer: number, seed = 3) => ({ ...ringDefaults(90), inner, outer, seed });
+  const alphas = (o: string[]) => fills(o).map((f) => Number(f.slice(f.lastIndexOf(',') + 1, -1)));
+
+  it('paints one white column per step from inner to outer edge; the material adds the colour', () => {
+    const o = record(() => ringTexture(rings(1.2, 2.3)));
+    expect(fills(o)).toHaveLength(256);
+    expect(fills(o).every((f) => f.startsWith('fill rgba(255,255,255,'))).toBe(true);
+  });
+
+  it('leaves a Cassini-like gap between 1.95 and 2.02 planet radii', () => {
+    const a = alphas(record(() => ringTexture(rings(1.2, 2.3))));
+    const col = (r: number) => Math.floor(((r - 1.2) / 1.1) * 256);
+    expect(a[col(1.985)]).toBeLessThan(0.1);
+    expect(a[col(1.6)]).toBeGreaterThan(0.3);
+  });
+
+  it('has no gap when the rings do not reach it', () => {
+    expect(Math.min(...alphas(record(() => ringTexture(rings(1.2, 1.8)))))).toBeGreaterThan(0.3);
+  });
+
+  it('is deterministic per seed', () => {
+    expect(record(() => ringTexture(rings(1.2, 2.3, 4)))).toEqual(record(() => ringTexture(rings(1.2, 2.3, 4))));
+    expect(record(() => ringTexture(rings(1.2, 2.3, 4)))).not.toEqual(record(() => ringTexture(rings(1.2, 2.3, 5))));
   });
 });
