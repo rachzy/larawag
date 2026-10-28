@@ -45,6 +45,10 @@ Units: star in solar units (Teff in K, radius in R☉, mass in M☉); planets in
 | `star.teff`, `star.radius`, `star.mass` | Positive numbers. Required, unless `star.spectralType` supplies them (see [Spectral types](#spectral-types)). |
 | `star.spectralType` | Optional. A spectral type such as `"G2V"`, `"K1.5 III"` or `"M4.5Ve"`. Fills a missing Teff, radius and mass from the main-sequence table. |
 | `star.colour` | Optional. Overrides the star colour, as `#rgb` or `#rrggbb`. |
+| `stars` | Instead of `star`, exactly two stars, each with the same fields as `star` (no `habitableZone`). See [Two stars](#two-stars). |
+| `binary.separation` | Optional, with `stars`. Distance between the two stars in AU. Default: four times their summed radii. |
+| `binary.phase` | Optional, with `stars`. Starting angle of the pair in radians, default 0. |
+| `binary.habitableZone` | Optional, with `stars`. Overrides the habitable zone (`{ inner, outer }` in AU). |
 | `planet.radius` | Required. R⊕. |
 | `planet.period` or `planet.a` | One is required. Days or AU. With only `a`, the period is derived. With both, both are used as given. |
 | `planet.phase` | Radians, default 0. |
@@ -102,6 +106,25 @@ createStarSystem(el, {
   planets: [{ name: 'e', period: 6.1, radius: 0.92 }],
 });
 ```
+
+## Two stars
+
+Pass `stars: [a, b]` instead of `star` to draw a binary. This is a simple prototype: the planets orbit the pair as if it were one star, with the summed mass and luminosity, star A's radius, and the Teff that gives that luminosity at that radius. Periods, temperatures, insolation, the habitable zone and true scale all use that combined star.
+
+The two stars are drawn circling their centre of mass, each at `separation × m_other / (m_a + m_b)` from it, with the period Kepler's third law gives for their total mass. In compressed scale the pair is drawn 3.2 scene units apart and each star is sized by the square root of its radius relative to the larger one; in true scale both use real ratios, in units of star A's radius.
+
+```js
+createStarSystem(el, {
+  stars: [
+    { name: 'Kepler-16 A', teff: 4450, radius: 0.649, mass: 0.69 },
+    { name: 'Kepler-16 B', teff: 3300, radius: 0.226, mass: 0.203 },
+  ],
+  binary: { separation: 0.224 },
+  planets: [{ name: 'b', period: 228.8, radius: 8.45 }],
+});
+```
+
+`DerivedSystem.stars` lists each star, `DerivedSystem.star` is the combined star, and `DerivedSystem.binary` holds the separation, period, each star's distance from the centre of mass and the phase (it is `null` for a single star). Planets inside the binary orbit are not flagged as unstable, and they are drawn crossing the stars.
 
 ## Planet looks
 
@@ -239,7 +262,7 @@ Larawag does not load fonts.
 
 ## Examples
 
-`examples/vanilla` is a plain HTML demo with a system picker (the example K dwarf, the Solar System with its planet presets, axial tilts and Saturn's rings, TRAPPIST-1 given only by its spectral type, a B5V blue dwarf and a K5III red giant) and a form to edit the star and planets.
+`examples/vanilla` is a plain HTML demo with a system picker (the example K dwarf, the Solar System with its planet presets, axial tilts and Saturn's rings, TRAPPIST-1 given only by its spectral type, a B5V blue dwarf, a K5III red giant and the Kepler-16 binary) and a form to edit the star, an optional second star and the planets.
 
 ```sh
 pnpm install
@@ -284,11 +307,13 @@ In `pnpm test:visual` (SwiftShader, with `planetStyle: 'prototype'`), the librar
 - The styles are injected into `document.head`, so a view inside a shadow root is not supported yet.
 - Image textures load with `crossOrigin = 'anonymous'`, so a server without CORS headers makes the image fail and the inferred look stays.
 - Spectral types use the main-sequence table only: giants get a dwarf's Teff, and white dwarfs are not supported.
+- Two stars are combined into one for the planets, so circumbinary stability limits are ignored and S-type planets (orbiting one star of the pair) are not supported.
 - At true scale on very wide systems, the camera cannot zoom closer than the minimum distance scaled to fit the system (for the Solar System, the Sun stays a few pixels across).
 
 ## TO-DO
 
-- More than one star in a system.
+- Implement Holman & Wiegert accurate orbits for binary systems.
+- More than two stars.
 - Moons.
 - Eccentric and inclined orbits.
 - Habitable zone from the Kopparapu et al. 2013 model, once its coefficients are checked against the paper.

@@ -5,6 +5,7 @@ import {
   type PlanetAppearance,
   type PlanetClass,
   type PlanetInput,
+  type StarInput,
   type SystemInput,
 } from '@larawag/core/physics';
 import { PRESETS, type Preset } from './systems.js';
@@ -21,13 +22,17 @@ const hzBtn = $<HTMLButtonElement>('hz');
 const errorsEl = $('errors');
 const planetsEl = $('planets');
 const cardsEl = $('cards');
-const starFields = {
-  name: $<HTMLInputElement>('star-name'),
-  spectralType: $<HTMLInputElement>('star-spectral'),
-  teff: $<HTMLInputElement>('star-teff'),
-  radius: $<HTMLInputElement>('star-radius'),
-  mass: $<HTMLInputElement>('star-mass'),
-};
+const starInputs = (id: string) => ({
+  name: $<HTMLInputElement>(`${id}-name`),
+  spectralType: $<HTMLInputElement>(`${id}-spectral`),
+  teff: $<HTMLInputElement>(`${id}-teff`),
+  radius: $<HTMLInputElement>(`${id}-radius`),
+  mass: $<HTMLInputElement>(`${id}-mass`),
+});
+type StarFields = ReturnType<typeof starInputs>;
+const starFields = starInputs('star');
+const star2Fields = starInputs('star2');
+const separationField = $<HTMLInputElement>('star2-separation');
 
 let view: StarSystemView | null = null;
 let trueScale = false;
@@ -119,26 +124,40 @@ function renumber(): void {
   });
 }
 
+const text = (v: string | number | undefined): string => (v === undefined ? '' : String(v));
+
+function fillStar(f: StarFields, s: StarInput = {}): void {
+  f.name.value = s.name ?? '';
+  f.spectralType.value = s.spectralType ?? '';
+  f.teff.value = text(s.teff);
+  f.radius.value = text(s.radius);
+  f.mass.value = text(s.mass);
+}
+
+function readStar(f: StarFields): StarInput {
+  const star: StarInput = {};
+  const spectralType = f.spectralType.value.trim();
+  if (spectralType) star.spectralType = spectralType;
+  // With a spectral type, empty fields are left for the table to fill.
+  for (const k of ['teff', 'radius', 'mass'] as const) {
+    if (!spectralType || f[k].value.trim() !== '') star[k] = num(f[k]);
+  }
+  if (f.name.value.trim()) star.name = f.name.value.trim();
+  return star;
+}
+
 function fillForm(input: SystemInput): void {
-  const s = input.star;
-  starFields.name.value = s.name ?? '';
-  starFields.spectralType.value = s.spectralType ?? '';
-  starFields.teff.value = s.teff === undefined ? '' : String(s.teff);
-  starFields.radius.value = s.radius === undefined ? '' : String(s.radius);
-  starFields.mass.value = s.mass === undefined ? '' : String(s.mass);
+  const [a, b] = input.stars ?? [input.star!];
+  fillStar(starFields, a);
+  fillStar(star2Fields, b);
+  separationField.value = text(input.binary?.separation);
   planetsEl.replaceChildren();
   input.planets.forEach((p) => addPlanetRow(p));
 }
 
 function readForm(): SystemInput {
-  const star: SystemInput['star'] = {};
-  const spectralType = starFields.spectralType.value.trim();
-  if (spectralType) star.spectralType = spectralType;
-  // With a spectral type, empty fields are left for the table to fill.
-  for (const k of ['teff', 'radius', 'mass'] as const) {
-    if (!spectralType || starFields[k].value.trim() !== '') star[k] = num(starFields[k]);
-  }
-  if (starFields.name.value.trim()) star.name = starFields.name.value.trim();
+  const star = readStar(starFields);
+  const hasSecond = Object.values(star2Fields).some((el) => el.value.trim() !== '');
   const planets = [...planetsEl.children].map((row): PlanetInput => {
     const f = (k: string): HTMLInputElement => row.querySelector(`[data-f="${k}"]`) as HTMLInputElement;
     const kind = (row.querySelector('[data-f="kind"]') as HTMLSelectElement).value;
@@ -159,7 +178,13 @@ function readForm(): SystemInput {
     if (f('rings').checked) p.rings = true;
     return p;
   });
-  return { star, planets };
+  if (!hasSecond) return { star, planets };
+  const separation = num(separationField);
+  return {
+    stars: [star, readStar(star2Fields)],
+    binary: Number.isNaN(separation) ? {} : { separation },
+    planets,
+  };
 }
 
 // ---- derived-value cards --------------------------------------------------
@@ -199,15 +224,29 @@ const classGiven = (i: number): boolean =>
 function renderCards(): void {
   if (!view) return;
   const sys = view.system;
-  const s = sys.star;
+  const hz: [string, string] = ['Habitable zone', `${fmt(sys.habitableZone.inner, 2)} – ${fmt(sys.habitableZone.outer, 2)} AU`];
+  const b = sys.binary;
   const cards = [
-    card(s.name, s.colourCss, s.spectralType ? `Star · ${s.spectralType}` : 'Star', [
-      ['Teff', `${fmt(s.teff, 0)} K`],
-      ['Radius', `${fmt(s.radius, 2)} R☉`],
-      ['Mass', `${fmt(s.mass, 2)} M☉`],
-      ['Luminosity', `${fmt(s.luminosity, 3)} L☉`],
-      ['Habitable zone', `${fmt(sys.habitableZone.inner, 2)} – ${fmt(sys.habitableZone.outer, 2)} AU`],
-    ]),
+    ...sys.stars.map((s) =>
+      card(s.name, s.colourCss, s.spectralType ? `Star · ${s.spectralType}` : 'Star', [
+        ['Teff', `${fmt(s.teff, 0)} K`],
+        ['Radius', `${fmt(s.radius, 2)} R☉`],
+        ['Mass', `${fmt(s.mass, 2)} M☉`],
+        ['Luminosity', `${fmt(s.luminosity, 3)} L☉`],
+        ...(b ? [] : [hz]),
+      ]),
+    ),
+    ...(b
+      ? [
+          card(sys.star.name, sys.star.colourCss, 'Both stars, as one star for the planets', [
+            ['Mass', `${fmt(sys.star.mass, 2)} M☉`],
+            ['Luminosity', `${fmt(sys.star.luminosity, 3)} L☉`],
+            ['Separation', `${fmt(b.separation, 3)} AU`],
+            ['Binary period', `${fmt(b.periodDays, 1)} d`],
+            hz,
+          ]),
+        ]
+      : []),
     ...sys.planets.map((p, i) =>
       card(p.name, p.colour, classGiven(i) ? p.planetClass : `${p.planetClass} (a guess from size)`, [
         ['Period', `${fmt(p.periodDays, 1)} d`],
