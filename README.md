@@ -10,7 +10,11 @@ Everything drawn is hypothetical. The library picks a plausible look from a few 
 pnpm add @larawag/core
 ```
 
-`three` is a peer dependency (`>=0.186.0 <0.187.0`), so your app and Larawag share a single copy. npm 7+ and pnpm 8+ install it automatically if it is missing; with Yarn or older package managers, add `three` yourself.
+
+### Sidenote for Yarn or older package manager users
+The three.js lib (`three`) is a peer dependency (`>=0.186.0 <0.187.0`), so your app and Larawag share a single copy. NPM 7+ and pnpm 8+ install peer dependencies automatically.
+
+However, if you're using Yarn or older package managers, you might have to do add it manually by running `pnpm add three` yourself.
 
 ## Usage
 
