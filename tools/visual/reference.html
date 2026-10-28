@@ -1,0 +1,297 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Star System Preview</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<script src="/r128/three.min.js"></script>
+<script src="/r128/OrbitControls.js"></script>
+<style>
+/* Layout: one 3D viewport with overlay labels, controls row, then star + planet cards. Deliberately dark-only: it is a night-sky scene. */
+:root{
+  --bg:#070a14; --fg:#e6e9f5; --muted:#8e97b8; --line:#232a47; --panel:#0e1226;
+  --accent:#f0a64a; --good:#58c68a; --warn:#e8b04a;
+  --sans:"IBM Plex Sans",system-ui,sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:14px;line-height:1.5;
+  padding-block:24px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+main{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1{font-size:22px;margin:0;font-weight:600}
+p{margin:0}
+.sub{color:var(--muted);max-width:70ch}
+#stage{position:relative;height:min(62vh,560px);min-height:320px;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:#04060d}
+#stage canvas{display:block;width:100%;height:100%}
+.lbl{position:absolute;left:0;top:0;pointer-events:none;font-family:var(--mono);font-size:12px;color:var(--fg);
+  background:rgba(7,10,20,.65);border:1px solid var(--line);padding:1px 6px;border-radius:3px;white-space:nowrap;transform:translate(-50%,-150%)}
+#clock{position:absolute;left:10px;bottom:8px;font-family:var(--mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+#badge{position:absolute;right:10px;top:8px;font-size:12px;color:var(--warn);border:1px solid var(--warn);padding:1px 8px;border-radius:3px;background:rgba(7,10,20,.65)}
+#fail{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;color:var(--muted)}
+#fail[hidden]{display:none}
+.ctl{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center}
+.ctl label{display:flex;gap:8px;align-items:center;color:var(--muted)}
+button{font:inherit;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:5px 12px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+input[type=range]{width:150px;accent-color:var(--accent)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px 14px;min-width:0}
+.card h2{font-size:15px;margin:0 0 2px;font-weight:600;display:flex;align-items:center;gap:8px}
+.dot{width:10px;height:10px;border-radius:50%;flex:none}
+.card .kind{color:var(--muted);margin-bottom:8px;font-size:13px}
+dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:2px 12px;font-size:13px}
+dt{color:var(--muted)} dd{margin:0;font-family:var(--mono);font-size:12.5px;text-align:right;font-variant-numeric:tabular-nums}
+.note{color:var(--muted);font-size:12.5px;max-width:80ch}
+</style>
+
+<style>
+/* Visual harness: fixed 960x540 stage at the page origin; only the WebGL canvas is compared. */
+body{padding:0!important}
+main{max-width:none;margin:0;gap:0}
+header,.ctl,.cards,.note,#badge,#clock,.lbl{display:none!important}
+#stage{width:960px;height:540px;min-height:0;border:0;border-radius:0}
+</style>
+
+<main>
+  <header>
+    <h1>Star System Preview</h1>
+    <p class="sub">Prototype: a K-type star with two hypothetical planets, driven by example numbers of the kind Shaula, Fang and the catalogues would supply. Drag to rotate, scroll to zoom.</p>
+  </header>
+
+  <div id="stage">
+    <div id="badge">Hypothetical · artist's impression</div>
+    <div id="clock"></div>
+    <div id="fail" hidden>WebGL is not available in this browser, so the 3D view cannot start.</div>
+  </div>
+
+  <div class="ctl">
+    <button id="play" type="button" aria-pressed="true">Pause</button>
+    <label for="speed">Speed <input id="speed" type="range" min="-1" max="2" step="0.05" value="0.2"> <span id="speedv" class="note"></span></label>
+    <button id="scale" type="button" aria-pressed="false">True scale: off</button>
+    <button id="hz" type="button" aria-pressed="true">Habitable zone: on</button>
+    <button id="transit" type="button">Transit view</button>
+    <button id="reset" type="button">Reset view</button>
+  </div>
+
+  <div class="cards" id="cards"></div>
+
+  <p class="note">Everything here is computed in the page from the example inputs shown: Kepler's third law for orbit size and speed, insolation and equilibrium temperature (Bond albedo 0.3) from the star, and colour from a blackbody at the star's temperature. Distances are compressed unless true scale is on; at true scale the planets are almost invisible, which is realistic. Fang scores are placeholders.</p>
+</main>
+
+<script>
+(function(){
+  /* Example inputs: what the pipeline would deliver for one candidate system */
+  var STAR={name:"Example K dwarf",teff:5100,mass:0.85,radius:0.80,logg:4.55,src:"example values"};
+  var PLANETS=[
+    {name:"Candidate b",period:4.2,rp:1.5,phase:0.6,fang:0.94},
+    {name:"Candidate c",period:18.5,rp:3.6,phase:2.9,fang:0.78}
+  ];
+  var ALBEDO=0.3, AU_PER_RSUN=215.032, REARTH_PER_RSUN=109.1;
+
+  /* Physics (the part that would live in shaula) */
+  function derive(p){
+    var a=Math.cbrt(STAR.mass*Math.pow(p.period/365.25,2));
+    var o={a:a};
+    o.aRs=a*AU_PER_RSUN/STAR.radius;
+    o.v=29.78*Math.sqrt(STAR.mass/a);
+    o.S=STAR.radius*STAR.radius*Math.pow(STAR.teff/5772,4)/(a*a);
+    o.Teq=STAR.teff*Math.sqrt((STAR.radius/AU_PER_RSUN)/(2*a))*Math.pow(1-ALBEDO,0.25);
+    o.rpRs=p.rp/REARTH_PER_RSUN/STAR.radius;
+    o.cls=p.rp<1.6?"Rocky":(p.rp<4?"Neptune-like":"Gas giant");
+    return o;
+  }
+  var L=STAR.radius*STAR.radius*Math.pow(STAR.teff/5772,4);
+  var HZ={in:Math.sqrt(L/1.1),out:Math.sqrt(L/0.36)};
+
+  function blackbody(T){
+    var t=T/100,r,g,b;
+    r=t<=66?255:329.698727446*Math.pow(t-60,-0.1332047592);
+    g=t<=66?99.4708025861*Math.log(t)-161.1195681661:288.1221695283*Math.pow(t-60,-0.0755148492);
+    b=t>=66?255:(t<=19?0:138.5177312231*Math.log(t-10)-305.0447927307);
+    function c(v){return Math.max(0,Math.min(255,v))/255}
+    var rgb=[c(r),c(g),c(b)];
+    return rgb.map(function(x){return x*0.8+0.2}); // soften toward white
+  }
+
+  /* Cards */
+  var cardsEl=document.getElementById("cards");
+  function card(title,color,kind,rows){
+    var d=document.createElement("div");d.className="card";
+    var h='<h2><span class="dot" style="background:'+color+'"></span>'+title+'</h2><div class="kind">'+kind+'</div><dl>';
+    rows.forEach(function(r){h+="<dt>"+r[0]+"</dt><dd>"+r[1]+"</dd>"});
+    d.innerHTML=h+"</dl>";cardsEl.appendChild(d);
+  }
+  var sc=blackbody(STAR.teff);
+  var scCss="rgb("+sc.map(function(x){return Math.round(x*255)}).join(",")+")";
+  card(STAR.name,scCss,"Star · "+STAR.src,[
+    ["Teff",STAR.teff+" K"],["Radius",STAR.radius.toFixed(2)+" R☉"],["Mass",STAR.mass.toFixed(2)+" M☉"],
+    ["log g",STAR.logg.toFixed(2)],["Habitable zone",HZ.in.toFixed(2)+" – "+HZ.out.toFixed(2)+" AU"]]);
+  var derived=PLANETS.map(derive);
+  var PCOL=["#c8a27a","#7fb7d9"];
+  PLANETS.forEach(function(p,i){
+    var d=derived[i];
+    card(p.name,PCOL[i],d.cls+" (a guess from size)",[
+      ["Period",p.period.toFixed(1)+" d"],["Radius",p.rp.toFixed(1)+" R⊕"],
+      ["Orbit",d.a.toFixed(3)+" AU"],["Orbit / star radius",d.aRs.toFixed(1)],["Orbital speed",d.v.toFixed(0)+" km/s"],
+      ["Insolation",d.S.toFixed(0)+" S⊕"],["Teq (A=0.3)",d.Teq.toFixed(0)+" K"],
+      ["Fang score (example)",p.fang.toFixed(2)]]);
+  });
+
+  /* 3D scene */
+  var stage=document.getElementById("stage"),fail=document.getElementById("fail");
+  var renderer;
+  try{
+    renderer=new THREE.WebGLRenderer({antialias:true});
+  }catch(e){fail.hidden=false;return;}
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+  stage.insertBefore(renderer.domElement,stage.firstChild);
+
+  var scene=new THREE.Scene();
+  var camera=new THREE.PerspectiveCamera(45,1,0.05,6000);
+  var controls=new THREE.OrbitControls(camera,renderer.domElement);
+  controls.enableDamping=true;controls.dampingFactor=0.08;controls.minDistance=3;controls.maxDistance=900;
+
+  // Starfield
+  (function(){
+    var n=1800,pos=new Float32Array(n*3),col=new Float32Array(n*3),seed=7;
+    function rnd(){seed=(seed*16807)%2147483647;return seed/2147483647}
+    for(var i=0;i<n;i++){
+      var u=rnd()*2-1,th=rnd()*Math.PI*2,s=Math.sqrt(1-u*u),R=2500;
+      pos[i*3]=R*s*Math.cos(th);pos[i*3+1]=R*u;pos[i*3+2]=R*s*Math.sin(th);
+      var b=0.4+0.6*rnd()*rnd();col[i*3]=b;col[i*3+1]=b*(0.9+0.1*rnd());col[i*3+2]=b;
+    }
+    var g=new THREE.BufferGeometry();
+    g.setAttribute("position",new THREE.BufferAttribute(pos,3));
+    g.setAttribute("color",new THREE.BufferAttribute(col,3));
+    scene.add(new THREE.Points(g,new THREE.PointsMaterial({size:2.2,sizeAttenuation:false,vertexColors:true})));
+  })();
+
+  // Star with limb darkening and glow
+  var starCol=new THREE.Color(sc[0],sc[1],sc[2]);
+  var starMat=new THREE.ShaderMaterial({
+    uniforms:{color:{value:starCol}},
+    vertexShader:"varying vec3 vN;varying vec3 vP;void main(){vN=normalize(normalMatrix*normal);vec4 mv=modelViewMatrix*vec4(position,1.0);vP=mv.xyz;gl_Position=projectionMatrix*mv;}",
+    fragmentShader:"uniform vec3 color;varying vec3 vN;varying vec3 vP;void main(){float mu=clamp(dot(normalize(vN),normalize(-vP)),0.0,1.0);float I=1.0-0.65*(1.0-mu);gl_FragColor=vec4(color*I*1.25,1.0);}"
+  });
+  var star=new THREE.Mesh(new THREE.SphereGeometry(1,48,32),starMat);
+  scene.add(star);
+  function glowTexture(){
+    var c=document.createElement("canvas");c.width=c.height=256;var x=c.getContext("2d");
+    var g=x.createRadialGradient(128,128,0,128,128,128);
+    g.addColorStop(0,"rgba(255,255,255,0.85)");g.addColorStop(0.18,"rgba(255,255,255,0.35)");
+    g.addColorStop(0.5,"rgba(255,255,255,0.08)");g.addColorStop(1,"rgba(255,255,255,0)");
+    x.fillStyle=g;x.fillRect(0,0,256,256);return new THREE.CanvasTexture(c);
+  }
+  var glow=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTexture(),color:starCol,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true}));
+  scene.add(glow);
+
+  var sun=new THREE.PointLight(starCol,1.6,0,1);scene.add(sun);
+  scene.add(new THREE.AmbientLight(0x1a2038,1.0));
+
+  // Procedural planet textures
+  function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;var t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+  function planetTexture(kind,seed){
+    var c=document.createElement("canvas");c.width=512;c.height=256;var x=c.getContext("2d"),r=rng(seed);
+    if(kind==="Rocky"){
+      x.fillStyle="#8a6b4f";x.fillRect(0,0,512,256);
+      for(var i=0;i<260;i++){
+        var cx=r()*512,cy=r()*256,rad=4+r()*26,l=r()<0.5;
+        x.fillStyle=l?"rgba(205,170,130,"+(0.08+r()*0.12)+")":"rgba(40,25,18,"+(0.1+r()*0.18)+")";
+        x.beginPath();x.arc(cx,cy,rad,0,7);x.fill();
+      }
+    }else{
+      var base=kind==="Neptune-like"?[[110,170,205],[88,140,190],[150,200,225]]:[[200,160,110],[170,120,80],[225,195,150]];
+      var y=0;
+      while(y<256){
+        var h=6+r()*22,cl=base[Math.floor(r()*base.length)];
+        x.fillStyle="rgb("+cl.join(",")+")";x.fillRect(0,y,512,h);y+=h;
+      }
+      for(var j=0;j<400;j++){x.fillStyle="rgba(255,255,255,"+(r()*0.05)+")";x.fillRect(r()*512,r()*256,30+r()*70,1+r()*2)}
+    }
+    return new THREE.CanvasTexture(c);
+  }
+
+  var bodies=PLANETS.map(function(p,i){
+    var d=derived[i];
+    var mat=new THREE.MeshStandardMaterial({map:planetTexture(d.cls,11+i*5),roughness:0.9,metalness:0});
+    if(d.Teq>700){mat.emissive=new THREE.Color(0xff4a10);mat.emissiveIntensity=Math.min(0.25,(d.Teq-700)/2500)}
+    var m=new THREE.Mesh(new THREE.SphereGeometry(1,40,28),mat);scene.add(m);
+    var ring=new THREE.LineLoop(new THREE.BufferGeometry(),new THREE.LineBasicMaterial({color:new THREE.Color(PCOL[i]),transparent:true,opacity:0.45}));
+    var pts=[];for(var k=0;k<256;k++){var t=k/256*Math.PI*2;pts.push(new THREE.Vector3(Math.cos(t),0,Math.sin(t)))}
+    ring.geometry.setFromPoints(pts);scene.add(ring);
+    var el=document.createElement("div");el.className="lbl";el.textContent=p.name+" · "+p.period.toFixed(1)+" d";stage.appendChild(el);
+    return {mesh:m,orbit:ring,el:el,r:1};
+  });
+  var hzMesh=null;
+
+  // Scale handling
+  var trueScale=false,showHz=true;
+  var AU=function(a){return a};
+  function orbitRadius(i){return trueScale?derived[i].aRs:5+8*Math.log(1+derived[i].a/0.05)}
+  function hzRadius(au){return trueScale?au*AU_PER_RSUN/STAR.radius:5+8*Math.log(1+au/0.05)}
+  var starR=2;
+  function applyScale(){
+    starR=trueScale?1:2;
+    star.scale.setScalar(starR);glow.scale.setScalar(starR*(trueScale?7:6));
+    bodies.forEach(function(b,i){
+      b.r=orbitRadius(i);b.orbit.scale.set(b.r,1,b.r);
+      var rad=trueScale?derived[i].rpRs:0.35+0.18*Math.pow(PLANETS[i].rp,0.6);
+      b.mesh.scale.setScalar(rad);
+    });
+    if(hzMesh){scene.remove(hzMesh);hzMesh.geometry.dispose();hzMesh.material.dispose()}
+    hzMesh=new THREE.Mesh(new THREE.RingGeometry(hzRadius(HZ.in),hzRadius(HZ.out),128),
+      new THREE.MeshBasicMaterial({color:0x58c68a,transparent:true,opacity:0.13,side:THREE.DoubleSide,depthWrite:false}));
+    hzMesh.rotation.x=-Math.PI/2;hzMesh.visible=showHz;scene.add(hzMesh);
+  }
+  function setView(kind){
+    var P;
+    if(kind==="transit")P=trueScale?[160,0.2,0]:[48,0.4,0];
+    else P=trueScale?[0,45,95]:[0,15,32];
+    camera.position.set(P[0],P[1],P[2]);controls.target.set(0,0,0);controls.update();
+  }
+  applyScale();setView("home");
+
+  // Simulation
+  var simDays=0,playing=!(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches);
+  var speedEl=document.getElementById("speed"),speedV=document.getElementById("speedv"),clock=document.getElementById("clock");
+  function rate(){return Math.pow(10,parseFloat(speedEl.value))}
+  function updSpeed(){speedV.textContent=rate().toFixed(1)+" d/s"}
+  speedEl.addEventListener("input",updSpeed);updSpeed();
+
+  function btn(id,fn){document.getElementById(id).addEventListener("click",fn)}
+  var playBtn=document.getElementById("play");
+  function updPlay(){playBtn.setAttribute("aria-pressed",playing);playBtn.textContent=playing?"Pause":"Play"}
+  btn("play",function(){playing=!playing;updPlay()});updPlay();
+  btn("scale",function(){trueScale=!trueScale;var b=document.getElementById("scale");b.setAttribute("aria-pressed",trueScale);b.textContent="True scale: "+(trueScale?"on":"off");applyScale();setView("home")});
+  btn("hz",function(){showHz=!showHz;var b=document.getElementById("hz");b.setAttribute("aria-pressed",showHz);b.textContent="Habitable zone: "+(showHz?"on":"off");if(hzMesh)hzMesh.visible=showHz});
+  btn("transit",function(){setView("transit")});
+  btn("reset",function(){setView("home")});
+
+  function resize(){
+    var w=stage.clientWidth,h=stage.clientHeight;
+    renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();
+  }
+  if(window.ResizeObserver)new ResizeObserver(resize).observe(stage);else window.addEventListener("resize",resize);
+  resize();
+
+  var v=new THREE.Vector3(),last=performance.now();
+  function frame(now){
+    var dt=Math.min(0.1,(now-last)/1000);last=now;
+    if(playing)simDays+=dt*rate();
+    bodies.forEach(function(b,i){
+      var th=PLANETS[i].phase+2*Math.PI*simDays/PLANETS[i].period;
+      b.mesh.position.set(b.r*Math.cos(th),0,b.r*Math.sin(th));
+      b.mesh.rotation.y+=playing?dt*0.8:0;
+      v.copy(b.mesh.position);v.y+=b.mesh.scale.x;v.project(camera);
+      var vis=v.z<1&&Math.abs(v.x)<1.1&&Math.abs(v.y)<1.1;
+      b.el.style.display=vis?"block":"none";
+      b.el.style.left=((v.x*0.5+0.5)*stage.clientWidth)+"px";
+      b.el.style.top=((-v.y*0.5+0.5)*stage.clientHeight)+"px";
+    });
+    clock.textContent="Simulated time: "+simDays.toFixed(1)+" days";
+    controls.update();renderer.render(scene,camera);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+
+</body></html>
