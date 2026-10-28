@@ -1,5 +1,6 @@
 import { isTexturePreset, TEXTURE_PRESETS } from './appearance.js';
 import { parseHexColour } from './colour.js';
+import { RING_INNER, RING_OUTER } from './rings.js';
 import { parseSpectralType, spectralProperties, type SpectralProperties } from './spectral.js';
 import type { ValidationIssue } from './types.js';
 
@@ -46,6 +47,28 @@ function checkStarBasics(star: Record<string, unknown>, add: Add, positive: Posi
 function checkColour(colour: unknown, path: string, add: Add): void {
   if (colour !== undefined && (typeof colour !== 'string' || !parseHexColour(colour)))
     add(path, `must be a hex colour such as "#ffcc88" (got ${show(colour)})`);
+}
+
+function checkRings(rings: unknown, path: string, add: Add): void {
+  if (rings === undefined || typeof rings === 'boolean') return;
+  if (!isObject(rings)) {
+    add(path, `must be true, false or an object (got ${show(rings)})`);
+    return;
+  }
+  let ok = true;
+  for (const k of ['inner', 'outer'] as const) {
+    const v = rings[k];
+    if (v !== undefined && (!isNum(v) || v <= 1)) {
+      add(`${path}.${k}`, `must be greater than 1 (got ${show(v)})`);
+      ok = false;
+    }
+  }
+  const inner = (rings.inner as number | undefined) ?? RING_INNER;
+  const outer = (rings.outer as number | undefined) ?? RING_OUTER;
+  if (ok && inner >= outer) add(path, `inner must be less than outer (got ${inner} and ${outer})`);
+  const o = rings.opacity;
+  if (o !== undefined && (!isNum(o) || o <= 0 || o > 1)) add(`${path}.opacity`, `must be a number in (0, 1] (got ${show(o)})`);
+  checkColour(rings.colour, `${path}.colour`, add);
 }
 
 const IMAGE_URL = /^(https?:\/\/|\.{0,2}\/|data:image\/|blob:)/;
@@ -112,6 +135,9 @@ export function validateSystem(input: unknown): ValidationIssue[] {
     if (t !== undefined && !isTexturePreset(t) && !(typeof t === 'string' && IMAGE_URL.test(t)))
       add(`${prefix}texture`, `must be one of ${TEXTURE_PRESETS.join(', ')}, or an image URL (got ${show(t)})`);
     checkColour(p.colour, `${prefix}colour`, add);
+    checkRings(p.rings, `${prefix}rings`, add);
+    if (p.obliquity !== undefined && !isNum(p.obliquity))
+      add(`${prefix}obliquity`, `must be a finite number (got ${show(p.obliquity)})`);
   });
   return issues;
 }

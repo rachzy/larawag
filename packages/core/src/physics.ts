@@ -7,4 +7,5 @@ export * from './physics/colour.js';
 export * from './physics/habitable-zone.js';
 export * from './physics/spectral.js';
 export * from './physics/appearance.js';
+export * from './physics/rings.js';
 export * from './physics/derive.js';

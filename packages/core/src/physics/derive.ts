@@ -1,4 +1,5 @@
 import { planetAppearance, type PlanetAppearance } from './appearance.js';
+import { deriveRings, type DerivedRings } from './rings.js';
 import { DEFAULT_ALBEDO } from './constants.js';
 import { blackbodyColour, colourToCss, parseHexColour } from './colour.js';
 import { classifyPlanet } from './classify.js';
@@ -23,6 +24,9 @@ export interface DerivedPlanet {
   colour: string;
   /** How the surface is painted. */
   appearance: PlanetAppearance;
+  rings: DerivedRings | null;
+  /** Axial tilt, degrees. */
+  obliquity: number;
   aAu: number;
   periodDays: number;
   aOverRs: number;
@@ -106,6 +110,8 @@ export function deriveSystem(input: SystemInput): DerivedSystem {
       phase: p.phase ?? 0,
       seed,
       appearance: planetAppearance({ planetClass, teq, seed, texture: p.texture, colour: p.colour }),
+      rings: deriveRings(p.rings, teq, seed),
+      obliquity: p.obliquity ?? 0,
     };
   });
 

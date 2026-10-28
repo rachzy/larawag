@@ -20,6 +20,18 @@ export interface StarInput {
   habitableZone?: { inner: number; outer: number };
 }
 
+/** Ring overrides. Radii in planet radii. */
+export interface RingsInput {
+  /** Default 1.2. Must be above 1. */
+  inner?: number;
+  /** Default 2.3. */
+  outer?: number;
+  /** `#rgb` or `#rrggbb`. Default from Teq: icy beige-white below 150 K, else dusty grey-brown. */
+  colour?: string;
+  /** In (0, 1]. Default 0.85 icy, 0.35 dusty. */
+  opacity?: number;
+}
+
 /** One planet. Period in days, a in AU, radius in R⊕. One of `period` / `a` is required. */
 export interface PlanetInput {
   radius: number;
@@ -47,6 +59,10 @@ export interface PlanetInput {
   texture?: string;
   /** Surface colour as `#rgb` or `#rrggbb`; replaces the palette and keeps the pattern. */
   colour?: string;
+  /** `true` for rings with inferred defaults, or an object of overrides. Default: none. */
+  rings?: boolean | RingsInput;
+  /** Axial tilt in degrees, default 0. Tilts the planet and its rings. */
+  obliquity?: number;
 }
 
 /** A star and its planets (possibly none). */
