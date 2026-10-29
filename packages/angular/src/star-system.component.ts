@@ -69,11 +69,15 @@ export class StarSystemComponent {
   readonly planetStyle = input<ViewOptions['planetStyle']>();
   /** Creation only: a change rebuilds the view. */
   readonly fallbackText = input<string>();
+  /** Creation only: a change rebuilds the view. Clicking a planet or its label locks the camera on it. */
+  readonly followOnClick = input<boolean>();
 
   /** Every frame, with the simulated time in days. Emitted outside Angular's zone. */
   readonly tick = output<number>();
   /** The system is invalid. The previous system, if any, stays on screen. */
   readonly error = output<unknown>();
+  /** The followed planet's index when the camera locks, and null when it is released. */
+  readonly followChange = output<number | null>();
 
   private readonly live = signal<StarSystemView | null>(null);
   /** The live view, or null before the first render, after destroy, or while the first system is invalid. */
@@ -99,7 +103,8 @@ export class StarSystemComponent {
       const minPlanetPixels = this.minPlanetPixels();
       const planetStyle = this.planetStyle();
       const fallbackText = this.fallbackText();
-      untracked(() => this.build({ autoplay, minPlanetPixels, planetStyle, fallbackText }));
+      const followOnClick = this.followOnClick();
+      untracked(() => this.build({ autoplay, minPlanetPixels, planetStyle, fallbackText, followOnClick }));
       onCleanup(() => {
         const view = this.live();
         if (!view) return;
@@ -187,7 +192,19 @@ export class StarSystemComponent {
     this.live()?.resetView();
   }
 
-  private build(creation: Pick<ViewOptions, 'autoplay' | 'minPlanetPixels' | 'planetStyle' | 'fallbackText'>): void {
+  /** Locks the camera on planet `index`. */
+  follow(index: number): void {
+    this.live()?.follow(index);
+  }
+
+  /** Releases the camera where it is. */
+  unfollow(): void {
+    this.live()?.unfollow();
+  }
+
+  private build(
+    creation: Pick<ViewOptions, 'autoplay' | 'minPlanetPixels' | 'planetStyle' | 'fallbackText' | 'followOnClick'>,
+  ): void {
     const system = this.system();
     this.attempted = JSON.stringify(system);
     const options: ViewOptions = {
@@ -202,6 +219,7 @@ export class StarSystemComponent {
       const view = this.zone.runOutsideAngular(() => {
         const v = this.create(this.host, system, options);
         v.onTick((days) => this.tick.emit(days));
+        v.onFollowChange((index) => this.followChange.emit(index));
         return v;
       });
       if (this.savedTime > 0) view.setTime(this.savedTime);

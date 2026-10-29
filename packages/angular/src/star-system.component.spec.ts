@@ -3,8 +3,9 @@ import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import type { StarSystemView, SystemInput, ViewOptions } from '@larawag/core';
 import { STAR_SYSTEM_FACTORY, StarSystemComponent } from './star-system.component';
 
-interface FakeView extends Omit<StarSystemView, 'playing'> {
+interface FakeView extends Omit<StarSystemView, 'playing' | 'following'> {
   playing: boolean;
+  following: number | null;
   container: HTMLElement;
   input: SystemInput;
   options: ViewOptions;
@@ -20,6 +21,7 @@ function fakeCreate(container: HTMLElement, input: SystemInput, options: ViewOpt
   if (invalidOf(input)) throw new Error('invalid system');
   let time = 0;
   const ticks = new Set<(days: number) => void>();
+  const followers = new Set<(index: number | null) => void>();
   const view: FakeView = {
     container,
     input,
@@ -50,6 +52,19 @@ function fakeCreate(container: HTMLElement, input: SystemInput, options: ViewOpt
       if (invalidOf(next)) throw new Error('invalid system');
     }),
     setOverlays: vi.fn(),
+    following: null,
+    follow: vi.fn((index: number) => {
+      view.following = index;
+      for (const cb of followers) cb(index);
+    }),
+    unfollow: vi.fn(() => {
+      view.following = null;
+      for (const cb of followers) cb(null);
+    }),
+    onFollowChange: vi.fn((cb: (index: number | null) => void) => {
+      followers.add(cb);
+      return () => followers.delete(cb);
+    }),
     onTick: vi.fn((cb: (days: number) => void) => {
       ticks.add(cb);
       return () => ticks.delete(cb);
@@ -225,6 +240,22 @@ describe('StarSystemComponent', () => {
     await set(fixture, { planetStyle: 'prototype' });
     expect(second.destroyed).toBe(true);
     expect(live()[0]!.options.planetStyle).toBe('prototype');
+  });
+
+  it('passes followOnClick at creation, rebuilds when it changes, and emits followChange', async () => {
+    const fixture = await mount({ system: sysA, followOnClick: true });
+    const first = created[0]!;
+    expect(first.options.followOnClick).toBe(true);
+    const changes: (number | null)[] = [];
+    fixture.componentInstance.followChange.subscribe((i) => changes.push(i));
+    fixture.componentInstance.follow(0);
+    fixture.componentInstance.unfollow();
+    expect(first.follow).toHaveBeenCalledWith(0);
+    expect(first.unfollow).toHaveBeenCalledTimes(1);
+    expect(changes).toEqual([0, null]);
+    await set(fixture, { followOnClick: false });
+    expect(first.destroyed).toBe(true);
+    expect(live()[0]!.options.followOnClick).toBe(false);
   });
 
   it('emits tick from the view loop', async () => {

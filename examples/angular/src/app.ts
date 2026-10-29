@@ -12,7 +12,7 @@ const reducedMotion = (): boolean => matchMedia('(prefers-reduced-motion: reduce
   template: `
     <header>
       <h1>Larawag Angular demo</h1>
-      <p class="sub">The same scene as the vanilla demo, drawn through the &lt;larawag-star-system&gt; component. Drag to rotate, scroll to zoom.</p>
+      <p class="sub">The same scene as the vanilla demo, drawn through the &lt;larawag-star-system&gt; component. Drag to rotate, scroll to zoom, click a planet to follow it.</p>
     </header>
 
     <div class="ctl">
@@ -33,6 +33,7 @@ const reducedMotion = (): boolean => matchMedia('(prefers-reduced-motion: reduce
         [rate]="10 ** speed()"
         [scaleMode]="trueScale() ? 'true' : 'compressed'"
         [showHabitableZone]="hz()"
+        [followOnClick]="true"
         (error)="showError($event)"
       />
     </div>
