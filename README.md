@@ -4,17 +4,13 @@ A small, framework-agnostic library that draws a hypothetical planetary system w
 
 Everything drawn is hypothetical. The library picks a plausible look from a few numbers and never claims to know a planet's composition, atmosphere or surface. Show your own "artist's impression" wording next to it, or keep the built-in badge.
 
+**Notes:** This lib was originally created for serving as a 3D engine for rendering hypothetical stellar systems with exoplanet candidates for the [Antares](https://github.com/rachzy/antares) project. **It's NOT 100% stable and was completely vibe-coded.**
+
 ## Install
 
 ```sh
-pnpm add @larawag/core
+pnpm add @larawag/core three
 ```
-
-
-### Sidenote for Yarn or older package manager users
-The three.js lib (`three`) is a peer dependency (`>=0.186.0 <0.187.0`), so your app and Larawag share a single copy. NPM 7+ and pnpm 8+ install peer dependencies automatically.
-
-However, if you're using Yarn or older package managers, you might have to do add it manually by running `pnpm add three` yourself.
 
 ## Usage
 
@@ -237,7 +233,7 @@ Only the text overlays can be restyled; the 3D scene is fixed. Set these CSS var
 
 Larawag does not load fonts.
 
-## React
+### React
 
 `@larawag/react` wraps the same view in a component for React 19.
 
@@ -261,17 +257,6 @@ function Preview({ system }) {
 ```
 
 The component renders one `div` with `width: 100%; height: 100%`, so size its parent. It creates the view after mount and destroys it on unmount, so it is safe under StrictMode and renders an empty `div` on the server. The file starts with `'use client'` for the Next.js App Router.
-
-| Prop | Behaviour |
-|---|---|
-| `system` (required) | Compared by value: a new object with the same content does nothing; different content calls `setSystem`. |
-| `scaleMode`, `showHabitableZone`, `rate`, `overlays` | Used at creation, then each change calls the matching method. `overlays` is compared field by field. |
-| `playing` | Left unset, the view autoplays (not under reduced motion). Set, it plays or pauses the view. |
-| `autoplay`, `minPlanetPixels`, `planetStyle`, `fallbackText` | Creation options: a change rebuilds the view and keeps the simulated time. |
-| `onTick(days)` | Called every frame. Changing the function does not resubscribe. |
-| `onError(error)` | Called when `system` is invalid (a `LarawagValidationError`). The previous system stays on screen; if the first one is invalid, nothing is drawn until a valid one arrives. |
-| `className`, `style` | On the `div`. `style` is merged over the full-size default. |
-| `ref` | A `StarSystemHandle`: `play()`, `pause()`, `setTime(days)`, `setView(preset)`, `resetView()`, and `view`, the live view (or `null`), for everything else such as `view.system`. |
 
 `useStarSystem(containerRef, system, props)` does the same for an element you render yourself and returns the handle.
 
