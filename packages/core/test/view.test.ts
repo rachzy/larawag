@@ -461,6 +461,31 @@ describe('createStarSystem with a renderer', () => {
     expect(mesh!.scale.x).toBeGreaterThan(b.rpOverRs);
   });
 
+  it('keeps planets visible at true scale by default, but not in the prototype style', () => {
+    const planetMesh = (v: ReturnType<typeof make>): Mesh => {
+      const w = container.querySelector<HTMLElement>('.larawag')!;
+      Object.defineProperty(w, 'clientWidth', { configurable: true, value: 960 });
+      Object.defineProperty(w, 'clientHeight', { configurable: true, value: 540 });
+      window.dispatchEvent(new Event('resize'));
+      step(16);
+      const scene = (fake!.render.mock.lastCall as [Scene])[0];
+      let mesh: Mesh | undefined;
+      scene.traverse((o) => {
+        const m = o as Mesh;
+        if (m.geometry?.type === 'SphereGeometry' && m.position.length() > 0 && !mesh) mesh = m;
+      });
+      return mesh!;
+    };
+    const v = make(fixture, { scaleMode: 'true' });
+    expect(planetMesh(v).scale.x).toBeGreaterThan(v.system.planets[0]!.rpOverRs);
+    v.destroy();
+    const p = make(fixture, { scaleMode: 'true', planetStyle: 'prototype' });
+    expect(planetMesh(p).scale.x).toBe(p.system.planets[0]!.rpOverRs);
+    p.destroy();
+    const off = make(fixture, { scaleMode: 'true', minPlanetPixels: 0 });
+    expect(planetMesh(off).scale.x).toBe(off.system.planets[0]!.rpOverRs);
+  });
+
   it('renders a lone star', () => {
     const v = make({ star: fixture.star, planets: [] });
     expect(() => step(16)).not.toThrow();
