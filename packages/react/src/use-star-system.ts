@@ -19,6 +19,8 @@ export interface StarSystemProps {
   minPlanetPixels?: number;
   /** Creation only: a change rebuilds the view. */
   fallbackText?: string;
+  /** Creation only: a change rebuilds the view. */
+  planetStyle?: ViewOptions['planetStyle'];
   /** Called every frame with the simulated time in days. */
   onTick?: (days: number) => void;
   /** Called when the system is invalid. The previous system, if any, stays on screen. */
@@ -62,7 +64,7 @@ export function useStarSystem(
   system: SystemInput,
   props: StarSystemProps = {},
 ): StarSystemHandle {
-  const { scaleMode, showHabitableZone, rate, overlays, playing, autoplay, minPlanetPixels, fallbackText } = props;
+  const { scaleMode, showHabitableZone, rate, overlays, playing, autoplay, minPlanetPixels, fallbackText, planetStyle } = props;
   const latest = useRef({ system, props });
   useLayoutEffect(() => {
     latest.current = { system, props };
@@ -87,6 +89,7 @@ export function useStarSystem(
         autoplay: p.playing ?? p.autoplay,
         minPlanetPixels: p.minPlanetPixels,
         fallbackText: p.fallbackText,
+        planetStyle: p.planetStyle,
       });
       view.onTick((days) => latest.current.props.onTick?.(days));
       if (savedTime.current > 0) view.setTime(savedTime.current);
@@ -114,7 +117,7 @@ export function useStarSystem(
         view.destroy();
       }
     };
-  }, [containerRef, autoplay, minPlanetPixels, fallbackText]);
+  }, [containerRef, autoplay, minPlanetPixels, fallbackText, planetStyle]);
 
   useEffect(() => {
     if (systemKey === attempted.current) return;

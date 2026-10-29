@@ -147,6 +147,14 @@ describe('useStarSystem', () => {
     expect(second.setScaleMode).not.toHaveBeenCalled();
   });
 
+  it('passes planetStyle at creation and rebuilds when it changes', () => {
+    const { rerender } = render(<Host system={sysA} planetStyle="prototype" />);
+    expect(created[0]!.options.planetStyle).toBe('prototype');
+    rerender(<Host system={sysA} planetStyle="inferred" />);
+    expect(created[0]!.destroyed).toBe(true);
+    expect(live()[0]!.options.planetStyle).toBe('inferred');
+  });
+
   it('calls the latest onTick without resubscribing and stops when it is removed', () => {
     const one = vi.fn();
     const two = vi.fn();

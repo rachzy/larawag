@@ -267,7 +267,7 @@ The component renders one `div` with `width: 100%; height: 100%`, so size its pa
 | `system` (required) | Compared by value: a new object with the same content does nothing; different content calls `setSystem`. |
 | `scaleMode`, `showHabitableZone`, `rate`, `overlays` | Used at creation, then each change calls the matching method. `overlays` is compared field by field. |
 | `playing` | Left unset, the view autoplays (not under reduced motion). Set, it plays or pauses the view. |
-| `autoplay`, `minPlanetPixels`, `fallbackText` | Creation options: a change rebuilds the view and keeps the simulated time. |
+| `autoplay`, `minPlanetPixels`, `planetStyle`, `fallbackText` | Creation options: a change rebuilds the view and keeps the simulated time. |
 | `onTick(days)` | Called every frame. Changing the function does not resubscribe. |
 | `onError(error)` | Called when `system` is invalid (a `LarawagValidationError`). The previous system stays on screen; if the first one is invalid, nothing is drawn until a valid one arrives. |
 | `className`, `style` | On the `div`. `style` is merged over the full-size default. |
