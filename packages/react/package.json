@@ -1,6 +1,6 @@
 {
   "name": "@larawag/react",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "React 19 component and hook for @larawag/core, the three.js view of a hypothetical planetary system.",
   "keywords": [
     "react",
