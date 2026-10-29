@@ -35,6 +35,8 @@ export default defineConfig({
     alias: [
       { find: /^@larawag\/core$/, replacement: pkg('core/src/index.ts') },
       { find: /^@larawag\/react$/, replacement: pkg('react/src/index.ts') },
+      // Angular needs its compiler, so this is the built package: run `pnpm --filter @larawag/angular build` first.
+      { find: /^@larawag\/angular$/, replacement: pkg('angular/dist/fesm2022/larawag-angular.mjs') },
     ],
   },
   server: { strictPort: false },

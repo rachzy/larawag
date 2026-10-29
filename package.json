@@ -7,7 +7,7 @@
     "dev:react": "pnpm --filter react-demo dev",
     "build": "pnpm -r build",
     "test": "pnpm -r test",
-    "test:visual": "pnpm --filter @larawag/visual compare && pnpm --filter @larawag/visual lifecycle && pnpm --filter @larawag/visual react",
+    "test:visual": "pnpm --filter @larawag/visual compare && pnpm --filter @larawag/visual lifecycle && pnpm --filter @larawag/visual react && pnpm --filter @larawag/visual angular",
     "changeset": "changeset",
     "release": "pnpm --filter \"./packages/*\" build && changeset publish"
   },
