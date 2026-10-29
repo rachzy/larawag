@@ -18,6 +18,7 @@ vi.mock('../src/render/textures.js', async (importOriginal) => {
     ...real,
     planetTexture: vi.fn(() => new Texture()),
     appearanceTexture: vi.fn(() => new Texture()),
+    ringTexture: vi.fn(() => new Texture()),
     glowTexture: () => new Texture(),
   };
 });

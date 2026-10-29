@@ -10,12 +10,15 @@ export interface Preset {
 }
 
 // Radii: NASA volumetric mean radius / 6371 km. Periods: NASA sidereal, days.
-const solar = (name: string, period: number, radius: number, phase: number) => ({
+// Obliquity: NASA axial tilt, degrees.
+const solar = (name: string, period: number, radius: number, phase: number, obliquity: number, rings = false) => ({
   name,
   period,
   radius,
   phase,
+  obliquity,
   texture: name.toLowerCase(),
+  ...(rings ? { rings: true } : {}),
 });
 
 export const PRESETS: Preset[] = [
@@ -39,14 +42,14 @@ export const PRESETS: Preset[] = [
     input: {
       star: { name: 'Sun', spectralType: 'G2V', teff: 5772, radius: 1, mass: 1 },
       planets: [
-        solar('Mercury', 87.969, 0.383, 0.4),
-        solar('Venus', 224.701, 0.95, 1.7),
-        solar('Earth', 365.256, 1, 2.9),
-        solar('Mars', 686.98, 0.532, 4.1),
-        solar('Jupiter', 4332.589, 10.97, 5.3),
-        solar('Saturn', 10755.7, 9.14, 0.9),
-        solar('Uranus', 30685.4, 3.98, 2.2),
-        solar('Neptune', 60189, 3.86, 3.6),
+        solar('Mercury', 87.969, 0.383, 0.4, 0.03),
+        solar('Venus', 224.701, 0.95, 1.7, 177.4),
+        solar('Earth', 365.256, 1, 2.9, 23.44),
+        solar('Mars', 686.98, 0.532, 4.1, 25.19),
+        solar('Jupiter', 4332.589, 10.97, 5.3, 3.13),
+        solar('Saturn', 10755.7, 9.14, 0.9, 26.73, true),
+        solar('Uranus', 30685.4, 3.98, 2.2, 97.77),
+        solar('Neptune', 60189, 3.86, 3.6, 28.32),
       ],
     },
   },

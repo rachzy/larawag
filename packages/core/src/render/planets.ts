@@ -1,6 +1,7 @@
 import { Color, Mesh, MeshStandardMaterial, ShaderChunk, ShaderLib, SphereGeometry, TextureLoader, type Texture } from 'three';
 import type { DerivedPlanet } from '../physics/derive.js';
 import { RENDER_TUNABLES } from './renderer-setup.js';
+import { createRings } from './rings.js';
 import { appearanceTexture, planetTexture } from './textures.js';
 
 /** `'inferred'` paints guessed looks from class and temperature; `'prototype'` keeps the v1 prototype's textures for them. */
@@ -95,10 +96,16 @@ export function createPlanet(p: DerivedPlanet, style: PlanetStyle = 'inferred'):
   }
   const geometry = new SphereGeometry(1, 40, 28);
   const mesh = new Mesh(geometry, material);
+  // Tilt last, so the spin about y turns around the tilted axis.
+  mesh.rotation.order = 'ZYX';
+  mesh.rotation.z = (p.obliquity * Math.PI) / 180;
+  const rings = p.rings ? createRings(p.rings) : null;
+  if (rings) mesh.add(rings.mesh);
   return {
     mesh,
     dispose() {
       disposed = true;
+      rings?.dispose();
       geometry.dispose();
       material.dispose();
       map.dispose();
