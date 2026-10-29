@@ -41,6 +41,24 @@ export function planetTexture(kind: PlanetClass, seed: number): CanvasTexture {
       x.arc(cx, cy, rad, 0, 7);
       x.fill();
     }
+  } else if (kind === 'ocean-world') {
+    x.fillStyle = '#1f4f8a';
+    x.fillRect(0, 0, 512, 256);
+    for (let i = 0; i < 180; i++) {
+      const cx = r() * 512;
+      const cy = r() * 256;
+      const rad = 6 + r() * 30;
+      x.fillStyle = r() < 0.5
+        ? 'rgba(70,130,190,' + (0.08 + r() * 0.12) + ')'
+        : 'rgba(10,35,75,' + (0.1 + r() * 0.15) + ')';
+      x.beginPath();
+      x.arc(cx, cy, rad, 0, 7);
+      x.fill();
+    }
+    for (let j = 0; j < 220; j++) {
+      x.fillStyle = 'rgba(255,255,255,' + (0.1 + r() * 0.25) + ')';
+      x.fillRect(r() * 512, r() * 256, 20 + r() * 60, 1 + r() * 3);
+    }
   } else {
     const base =
       kind === 'neptune-like'

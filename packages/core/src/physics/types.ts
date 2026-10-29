@@ -1,5 +1,5 @@
-/** Rough planet class, guessed from size. */
-export type PlanetClass = 'rocky' | 'neptune-like' | 'gas-giant';
+/** Rough planet class. Guessed from size when not given; `ocean-world` is never guessed. */
+export type PlanetClass = 'rocky' | 'neptune-like' | 'gas-giant' | 'ocean-world';
 
 /**
  * Host star. Solar units: Teff in K, radius in R☉, mass in M☉.

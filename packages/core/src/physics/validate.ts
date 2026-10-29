@@ -2,7 +2,7 @@ import { parseHexColour } from './colour.js';
 import { parseSpectralType, spectralProperties, type SpectralProperties } from './spectral.js';
 import type { ValidationIssue } from './types.js';
 
-const CLASSES = ['rocky', 'neptune-like', 'gas-giant'];
+const CLASSES = ['rocky', 'neptune-like', 'gas-giant', 'ocean-world'];
 
 const isObject = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
