@@ -721,6 +721,26 @@ describe('followOnClick', () => {
     expect(changes).toEqual([0, 1, null, 0, null]);
   });
 
+  it('clicking the followed planet or its label again does not restart the fly-in', () => {
+    const v = sized({ followOnClick: true, autoplay: false });
+    const changes: (number | null)[] = [];
+    v.onFollowChange((i) => changes.push(i));
+    step(16);
+    label(0).click();
+    for (let t = 32; t <= 1500; t += 16) step(t);
+    // Zoom out by hand, as the wheel would.
+    const cam = lastCamera();
+    const p = planetMeshes()[0]!.position;
+    cam.position.sub(p).multiplyScalar(2).add(p);
+    step(1516);
+    const pos = cam.position.clone();
+    label(0).click();
+    v.follow(0);
+    for (let t = 1532; t <= 2000; t += 16) step(t);
+    expect(cam.position.distanceTo(pos)).toBeLessThan(1e-9);
+    expect(changes).toEqual([0]);
+  });
+
   it('follow() and unfollow() work without the option; bad indexes are ignored', () => {
     const v = sized();
     step(16);

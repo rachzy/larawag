@@ -279,8 +279,7 @@ export function createStarSystem(
     };
 
     /** Starts (or restarts) the fly-in to planet `i` and keeps following it. */
-    const follow = (i: number): void => {
-      if (!Number.isInteger(i) || i < 0 || i >= pieces.bodies.length) return;
+    const lockOn = (i: number): void => {
       const changed = followed !== i;
       if (followed === null) window.addEventListener('keydown', onKey);
       followed = i;
@@ -295,6 +294,12 @@ export function createStarSystem(
       unlockButton ??= createUnlockButton(wrapper, unfollow);
       unlockButton.setVisible(true);
       if (changed) emitFollow();
+    };
+
+    /** Locks on planet `i` unless it is already followed or does not exist. */
+    const follow = (i: number): void => {
+      if (i === followed || !Number.isInteger(i) || i < 0 || i >= pieces.bodies.length) return;
+      lockOn(i);
     };
 
     const unfollow = (): void => {
@@ -524,7 +529,7 @@ export function createStarSystem(
         mode = m;
         pieces.applyScale(mode);
         applyFit();
-        if (followed !== null) follow(followed);
+        if (followed !== null) lockOn(followed);
         else setView('home');
       },
       setHabitableZoneVisible(v) {
@@ -556,7 +561,7 @@ export function createStarSystem(
         const refit = applyFit();
         if (followed !== null && followed < pieces.bodies.length) {
           labels.setFollowed(followed);
-          follow(followed);
+          lockOn(followed);
         } else {
           unfollow();
           if (refit) setView('home');

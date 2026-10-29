@@ -250,7 +250,7 @@ createStarSystem(container, input, {
 
 ## Following a planet
 
-With `followOnClick: true`, clicking a planet or its label flies the camera to that planet in under a second (instantly under reduced motion) and then moves it along with the planet, so the planet stays in the centre of the view while it orbits. Dragging still rotates around the planet and the wheel still zooms; panning is off while the camera is locked. Clicking another planet switches to it.
+With `followOnClick: true`, clicking a planet or its label flies the camera to that planet in under a second (instantly under reduced motion) and then moves it along with the planet, so the planet stays in the centre of the view while it orbits. Dragging still rotates around the planet and the wheel still zooms; panning is off while the camera is locked. Clicking another planet switches to it; clicking the followed one again does nothing.
 
 Only two things release the camera: the Esc key and the "Unlock camera" button that appears in the bottom-right corner while a planet is followed. `setView` and `resetView` also release it, since they move the camera elsewhere; `setScaleMode` keeps the planet and frames it again at the new scale. The camera stays where it was when released.
 
