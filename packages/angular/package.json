@@ -4,7 +4,7 @@
   "sideEffects": false,
   "scripts": {
     "build": "ng build",
-    "test": "ng test"
+    "test": "ng test --watch=false"
   },
   "peerDependencies": {
     "@angular/core": "^22.0.0",
