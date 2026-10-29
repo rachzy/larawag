@@ -8,9 +8,16 @@ Everything drawn is hypothetical. The library picks a plausible look from a few 
 
 ## Install
 
+### Vanilla
+
+For the vanilla (simple browser usage) installation:
 ```sh
 pnpm add @larawag/core three
 ```
+
+### Framework integrations
+
+- [React](#react)
 
 ## Usage
 
