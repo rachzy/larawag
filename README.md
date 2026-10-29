@@ -317,7 +317,7 @@ pnpm add @larawag/angular @larawag/core three
 ```
 
 ```ts
-import { Component, signal, viewChild } from '@angular/core';
+import { Component, input, viewChild } from '@angular/core';
 import { StarSystemComponent } from '@larawag/angular';
 import type { SystemInput } from '@larawag/core';
 
@@ -326,21 +326,47 @@ import type { SystemInput } from '@larawag/core';
   imports: [StarSystemComponent],
   template: `
     <div style="height: 480px">
-      <larawag-star-system [system]="system()" scaleMode="compressed" (error)="onError($event)" />
+      <larawag-star-system [system]="system()" scaleMode="compressed" (error)="warn($event)" />
     </div>
     <button (click)="view()?.setView('transit')">Transit view</button>
   `,
 })
 export class Preview {
-  readonly system = signal<SystemInput>({ star: { teff: 5100, radius: 0.8, mass: 0.85 }, planets: [{ period: 4.2, radius: 1.5 }] });
+  readonly system = input.required<SystemInput>();
   readonly view = viewChild(StarSystemComponent);
-  onError(e: unknown) { console.warn(e); }
+
+  warn(error: unknown) {
+    console.warn(error);
+  }
 }
 ```
 
-The inputs, outputs and methods match the React props: `system` (compared by value), `scaleMode`, `showHabitableZone`, `rate`, `overlays` and `playing` call the view's methods when they change; `autoplay`, `minPlanetPixels`, `planetStyle` and `fallbackText` rebuild the view; `(tick)` and `(error)` are outputs; the component has `play()`, `pause()`, `setTime()`, `setView()`, `resetView()` and a `view` signal with the live view.
+Inputs can also drive the view directly. Here a signal bound to `[playing]` plays and pauses it, with no reference to the component:
 
-The host element is `display: block; width: 100%; height: 100%`, so size its parent. The view is created after the first render (nothing runs on the server) and destroyed with the component. The render loop runs outside Angular's zone, so apps that still use zone.js do not run change detection every frame; `(tick)` is emitted there too. Bind `(tick)` only when you need it, since each emit with a listener schedules change detection in a zoneless app.
+```ts
+import { Component, input, signal } from '@angular/core';
+import { StarSystemComponent } from '@larawag/angular';
+import type { SystemInput } from '@larawag/core';
+
+@Component({
+  selector: 'app-stage',
+  imports: [StarSystemComponent],
+  template: `
+    <div style="height: 480px">
+      <larawag-star-system [system]="system()" scaleMode="true" [playing]="playing()" />
+    </div>
+    <button (click)="playing.set(!playing())">{{ playing() ? 'Pause' : 'Play' }}</button>
+  `,
+})
+export class Stage {
+  readonly system = input.required<SystemInput>();
+  readonly playing = signal(true);
+}
+```
+
+The inputs, outputs and methods match the React props: `system` (compared by value), `scaleMode`, `showHabitableZone`, `rate`, `overlays` and `playing` call the view's methods when they change; `autoplay`, `minPlanetPixels`, `planetStyle`, `followOnClick` and `fallbackText` rebuild the view; `(tick)`, `(error)` and `(followChange)` are outputs; the component has `play()`, `pause()`, `setTime()`, `setView()`, `resetView()`, `follow()`, `unfollow()` and a `view` signal with the live view.
+
+The host element is `display: block; width: 100%; height: 100%`, so size its parent. The view is created after the first render (nothing runs on the server) and destroyed with the component. The render loop runs outside Angular's zone, so apps that still use zone.js do not run change detection every frame; `(tick)` and `(followChange)` are emitted there too. Bind `(tick)` only when you need it, since each emit with a listener schedules change detection in a zoneless app.
 
 ## Examples
 
