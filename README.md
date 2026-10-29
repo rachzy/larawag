@@ -286,24 +286,44 @@ pnpm add @larawag/react @larawag/core three
 
 ```tsx
 import { useRef } from 'react';
+import type { SystemInput } from '@larawag/core';
 import { StarSystem, type StarSystemHandle } from '@larawag/react';
 
-function Preview({ system }) {
+const Preview = ({ system }: { system: SystemInput }) => {
   const view = useRef<StarSystemHandle>(null);
+
   return (
     <div style={{ height: 480 }}>
       <StarSystem system={system} scaleMode="compressed" ref={view} onError={(e) => console.warn(e)} />
       <button onClick={() => view.current?.setView('transit')}>Transit view</button>
     </div>
   );
-}
+};
 ```
 
 The component renders one `div` with `width: 100%; height: 100%`, so size its parent. It creates the view after mount and destroys it on unmount, so it is safe under StrictMode and renders an empty `div` on the server. The file starts with `'use client'` for the Next.js App Router.
 
 `followOnClick` is a creation-only prop like `planetStyle`, `onFollowChange` receives the followed planet's index (or `null`), and the handle has `follow(index)` and `unfollow()`.
 
-`useStarSystem(containerRef, system, props)` does the same for an element you render yourself and returns the handle.
+`useStarSystem(containerRef, system, props)` mounts the view in an element you render yourself and returns the same handle the component's ref gives you:
+
+```tsx
+import { useRef } from 'react';
+import type { SystemInput } from '@larawag/core';
+import { useStarSystem } from '@larawag/react';
+
+const Stage = ({ system }: { system: SystemInput }) => {
+  const container = useRef<HTMLDivElement>(null);
+  const view = useStarSystem(container, system, { scaleMode: 'true' });
+
+  return (
+    <section>
+      <div ref={container} style={{ height: 480 }} />
+      <button onClick={() => view.pause()}>Pause</button>
+    </section>
+  );
+};
+```
 
 Avoid setting React state from `onTick` on every frame; the clock overlay already shows the time.
 
