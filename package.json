@@ -2,6 +2,8 @@
   "name": "larawag-workspace",
   "private": true,
   "scripts": {
+    "dev": "pnpm --filter vanilla dev",
+    "dev:react": "pnpm --filter react-demo dev",
     "build": "pnpm -r build",
     "test": "pnpm -r test",
     "test:visual": "pnpm --filter @larawag/visual compare && pnpm --filter @larawag/visual lifecycle && pnpm --filter @larawag/visual react"

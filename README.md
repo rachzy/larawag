@@ -283,13 +283,13 @@ Avoid setting React state from `onTick` on every frame; the clock overlay alread
 
 ```sh
 pnpm install
-pnpm --filter vanilla dev
+pnpm dev          # same as pnpm --filter vanilla dev
 ```
 
 `examples/react` shows the same systems and controls through `<StarSystem>` (no editing form):
 
 ```sh
-pnpm --filter react-demo dev
+pnpm dev:react    # same as pnpm --filter react-demo dev
 ```
 
 ## Development

@@ -24,7 +24,7 @@ The library (`packages/core`), the React wrapper (`packages/react`), the demos (
 
 ## Commands
 
-`pnpm install`, `pnpm -r build`, `pnpm -r test`, `pnpm --filter @larawag/core test <name>` for a single test file, `pnpm --filter vanilla dev` / `pnpm --filter react-demo dev` for the demos, `pnpm test:visual` for the screenshot comparison and lifecycle suites (run `pnpm --filter @larawag/visual exec playwright install chromium` once first, or set `LARAWAG_CHROMIUM` to another Chromium's executable path). The Vitest fixture is star 5100 K / 0.80 R☉ / 0.85 M☉ with planet b (4.2 d, 1.5 R⊕) and planet c (18.5 d, 3.6 R⊕).
+`pnpm install`, `pnpm -r build`, `pnpm -r test`, `pnpm --filter @larawag/core test <name>` for a single test file, `pnpm dev` / `pnpm dev:react` for the demos (vanilla and React), `pnpm test:visual` for the screenshot comparison and lifecycle suites (run `pnpm --filter @larawag/visual exec playwright install chromium` once first, or set `LARAWAG_CHROMIUM` to another Chromium's executable path). The Vitest fixture is star 5100 K / 0.80 R☉ / 0.85 M☉ with planet b (4.2 d, 1.5 R⊕) and planet c (18.5 d, 3.6 R⊕).
 
 ## Conventions
 
