@@ -1,6 +1,27 @@
 {
   "name": "@larawag/core",
-  "version": "0.0.0",
+  "version": "0.1.0",
+  "description": "Framework-agnostic three.js view of a hypothetical single-star planetary system, drawn from a few numbers.",
+  "keywords": [
+    "three",
+    "threejs",
+    "exoplanet",
+    "planetary-system",
+    "astronomy",
+    "visualization",
+    "3d"
+  ],
+  "license": "MIT",
+  "author": "rach",
+  "homepage": "https://github.com/rachzy/larawag/tree/main/packages/core#readme",
+  "bugs": {
+    "url": "https://github.com/rachzy/larawag/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rachzy/larawag.git",
+    "directory": "packages/core"
+  },
   "type": "module",
   "sideEffects": false,
   "exports": {
@@ -29,5 +50,8 @@
     "three": "0.186.1",
     "typescript": "7.0.2",
     "vitest": "5.0.5"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

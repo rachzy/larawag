@@ -1,6 +1,28 @@
 {
   "name": "@larawag/react",
-  "version": "0.0.0",
+  "version": "0.1.0",
+  "description": "React 19 component and hook for @larawag/core, the three.js view of a hypothetical planetary system.",
+  "keywords": [
+    "react",
+    "three",
+    "threejs",
+    "exoplanet",
+    "planetary-system",
+    "astronomy",
+    "visualization",
+    "3d"
+  ],
+  "license": "MIT",
+  "author": "rach",
+  "homepage": "https://github.com/rachzy/larawag/tree/main/packages/react#readme",
+  "bugs": {
+    "url": "https://github.com/rachzy/larawag/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rachzy/larawag.git",
+    "directory": "packages/react"
+  },
   "type": "module",
   "sideEffects": false,
   "exports": {
@@ -34,5 +56,8 @@
     "three": "0.186.1",
     "typescript": "7.0.2",
     "vitest": "5.0.5"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

@@ -315,6 +315,14 @@ pnpm test:visual                          # screenshots against the original pro
 
 Run `pnpm --filter @larawag/visual exec playwright install chromium` once before the first `pnpm test:visual`. To use another Chromium build, set `LARAWAG_CHROMIUM` to its executable path.
 
+## Releasing
+
+`@larawag/core` and `@larawag/react` are published to npm with [Changesets](https://github.com/changesets/changesets) and always share one version number.
+
+1. In a PR that changes a published package, run `pnpm changeset`, pick patch, minor or major, and write one line for the changelog.
+2. After that PR is merged, the release workflow opens or updates a "Version Packages" PR with the new versions and `CHANGELOG.md` entries.
+3. Merging the Version PR publishes to npm through trusted publishing (no npm token) once a maintainer approves the `npm` environment, then tags the release on GitHub.
+
 ## Visual behaviour
 
 The scene is the one from the "Star System Preview" prototype. Kept as it was:
