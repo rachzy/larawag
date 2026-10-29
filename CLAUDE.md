@@ -20,6 +20,7 @@ The library (`packages/core`), the React wrapper (`packages/react`), the demos (
 - `packages/react` is `@larawag/react`: `<StarSystem>` and `useStarSystem`, React 19 only, built with plain tsc. Its unit tests mock `@larawag/core`.
 - `examples/vanilla` is the Vite demo with an editable star and planet form. `examples/react` (package `react-demo`) shows the same presets and controls through `<StarSystem>`, without the form, and imports the presets from `examples/vanilla/systems.ts`.
 - `tools/visual` holds the Playwright screenshot comparison against the original prototype (three r128 served locally, not from a CDN) and the browser lifecycle suites for core and the React wrapper (`probe.ts` is the shared leak instrumentation).
+- `@larawag/core` and `@larawag/react` are published with Changesets in one `fixed` version group (`.changeset/config.json`); a new published package joins that group. `.github/workflows/release.yml` publishes through npm trusted publishing, so `repository.url` in each package must stay `git+https://github.com/rachzy/larawag.git`.
 - three is a peerDependency (`>=0.186.0 <0.187.0`) and is pinned exactly to `0.186.1` for development. OrbitControls comes from `three/addons/controls/OrbitControls.js`.
 
 ## Commands
@@ -42,3 +43,4 @@ The library (`packages/core`), the React wrapper (`packages/react`), the demos (
 3. Commit with Henrique's git identity (the repo's configured user) and add Claude only as a `Co-Authored-By` trailer.
 4. Do not commit markdown plans or specs. Keep them in `tmp/plans/`, which is git-ignored.
 5. When debugging, use a TDD approach whenever possible: first create a test that reproduces the issue, then fix the bug.
+6. A PR that changes a published package (`packages/*`) adds a changeset (`pnpm changeset`). Releases happen only when Henrique merges the Version Packages PR and approves the `npm` environment; never run `changeset publish` or `npm publish` yourself.

@@ -1,11 +1,18 @@
 {
   "name": "larawag-workspace",
   "private": true,
+  "packageManager": "pnpm@10.28.0",
   "scripts": {
     "dev": "pnpm --filter vanilla dev",
     "dev:react": "pnpm --filter react-demo dev",
     "build": "pnpm -r build",
     "test": "pnpm -r test",
-    "test:visual": "pnpm --filter @larawag/visual compare && pnpm --filter @larawag/visual lifecycle && pnpm --filter @larawag/visual react"
+    "test:visual": "pnpm --filter @larawag/visual compare && pnpm --filter @larawag/visual lifecycle && pnpm --filter @larawag/visual react",
+    "changeset": "changeset",
+    "release": "pnpm --filter \"./packages/*\" build && changeset publish"
+  },
+  "devDependencies": {
+    "@changesets/changelog-github": "^1.0.1",
+    "@changesets/cli": "^3.0.3"
   }
 }
