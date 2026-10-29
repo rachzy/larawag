@@ -49,6 +49,8 @@ Units: star in solar units (Teff in K, radius in R☉, mass in M☉); planets in
 | `planet.period` or `planet.a` | One is required. Days or AU. With only `a`, the period is derived. With both, both are used as given. |
 | `planet.phase` | Radians, default 0. |
 | `planet.planetClass` | Optional. `'rocky'`, `'neptune-like'`, `'gas-giant'` or `'ocean-world'`. Without it the class is guessed from radius (see below); an ocean world is never guessed. |
+| `planet.texture` | Optional. A preset look (`'mercury'`, `'venus'`, `'earth'`, `'mars'`, `'jupiter'`, `'saturn'`, `'uranus'`, `'neptune'`) or an image URL (`http(s)://`, `/`, `./`, `../`, `data:image/`, `blob:`). Default: inferred, see [Planet looks](#planet-looks). |
+| `planet.colour` | Optional. Surface colour as `#rgb` or `#rrggbb`. It replaces the palette and keeps the pattern. |
 | `planet.albedo` | Bond albedo for the equilibrium temperature, default 0.3. |
 | `name`, `planet.seed` | Optional. Unnamed planets are labelled b, c, d… up to z, then `planet 26`, `planet 27`… The seed fixes the texture; the default is `11 + 5 × index`. |
 
@@ -99,6 +101,51 @@ createStarSystem(el, {
 });
 ```
 
+## Planet looks
+
+Every planet is painted procedurally on a canvas; nothing is downloaded unless you pass an image URL. The look is decided in this order:
+
+1. `texture` with a preset name: that preset, with its own fixed seed, wherever the planet sits in the list.
+2. `texture` with an image URL: the image, loaded as an equirectangular map (cross-origin images need CORS). The inferred look shows while it loads, and stays if it fails.
+3. Otherwise the look is inferred: the pattern from the planet class, the colours from the class and the equilibrium temperature (`teq`, including a `teq` you pass).
+
+`colour` replaces the colours of any of these and keeps the pattern (for `earth`, it replaces the ocean).
+
+**Presets**, in approximate true colour:
+
+| Preset | Pattern | Colours |
+|---|---|---|
+| `mercury` | craters | mid grey with a brown tint |
+| `venus` | smooth cloud deck | pale yellow-cream |
+| `earth` | oceans, continents, polar caps, clouds | blue, green-brown, white |
+| `mars` | craters and polar caps | rust orange, darker brown |
+| `jupiter` | bands, seed 31 | the original prototype's gas-giant bands |
+| `saturn` | bands, lower contrast | pale butterscotch |
+| `uranus` | faint bands | pale cyan |
+| `neptune` | faint bands and a dark spot | pale blue, close to Uranus, after the 2024 true-colour reprocessing ([Irwin et al. 2024](https://ora.ox.ac.uk/objects/uuid:bd2a8681-ef1a-4e90-a13f-8d4a69f6b8a6)) |
+
+**Inferred colours.** Patterns: craters for rocky planets, bands for Neptune-like planets and gas giants, oceans with clouds for ocean worlds. Colours by equilibrium temperature (Bond albedo 0.3 unless given):
+
+| Class | Teq | Colours | Basis |
+|---|---|---|---|
+| rocky | below 150 K | grey-white, blue tint | water ice is stable on airless surfaces |
+| rocky | 150 to 500 K | browns and tans (the original prototype's rock) | bare rock, no oceans implied |
+| rocky | 500 to 1,000 K | dark basalt greys and browns | hot bare rock |
+| rocky | from 1,000 K | near-black crust, orange spots | lava world: the dayside passes rock melting (about 1,400 K) |
+| Neptune-like | below 150 K | pale cyan | methane absorbs red light (Uranus, Neptune) |
+| Neptune-like | 150 to 700 K | muted grey-blue haze | no colours observed; kept muted |
+| Neptune-like | from 700 K | muted grey-tan haze | no colours observed; kept muted |
+| gas giant | below 150 K | tan, cream and brown bands | Sudarsky class I, ammonia clouds |
+| gas giant | 150 to 350 K | bright white | Sudarsky class II, water clouds |
+| gas giant | 350 to 900 K | azure blue | Sudarsky class III, cloudless |
+| gas giant | 900 to 1,400 K | very dark blue-grey | Sudarsky class IV, alkali metals |
+| gas giant | from 1,400 K | grey-green | Sudarsky class V, silicate clouds |
+| ocean world | below 270 K | white and pale blue | frozen |
+| ocean world | 270 to 400 K | deep blue | liquid water |
+| ocean world | from 400 K | pale grey-white | steam |
+
+Neighbouring rows blend over 50 K, so colours change smoothly with temperature. Each planet's colours then shift by its seed, within ±8° of hue and ±0.08 of lightness, never more saturated, so two similar planets differ a little and nothing turns neon. The Sudarsky classes ([Sudarsky et al. 2000](https://ui.adsabs.harvard.edu/abs/2000ApJ...538..885S/abstract)) are model predictions, and the haze and lava looks are guesses: like everything Larawag draws, the look is hypothetical. The orange glow above 700 K applies to every look.
+
 ## Options
 
 The third argument of `createStarSystem` is optional. Every field is optional too.
@@ -113,6 +160,7 @@ The third argument of `createStarSystem` is optional. Every field is optional to
 | `overlays.labels` | `boolean` | `true` | Planet labels projected over the canvas. |
 | `overlays.clock` | `boolean \| { format }` | `true` | Simulated-time readout. `format` is `(days: number) => string`. |
 | `overlays.badge` | `boolean \| { text }` | `true` | The "Hypothetical · artist's impression" badge. `text` replaces its wording. |
+| `planetStyle` | `'inferred' \| 'prototype'` | `'inferred'` | How planets without a `texture` or `colour` look: guessed from class and temperature, or the original prototype's textures. Planets with a texture or colour look the same in both. |
 | `fallbackText` | `string` | `'WebGL is not available in this browser, so the 3D view cannot start.'` | Shown instead of the scene when WebGL cannot start. |
 
 This is the default options:
@@ -124,6 +172,7 @@ createStarSystem(container, input, {
   rate: 10 ** 0.2,
   autoplay: true,
   minPlanetPixels: 0,
+  planetStyle: 'inferred',
   overlays: {
     labels: true,
     clock: true,
@@ -178,7 +227,7 @@ Larawag does not load fonts.
 
 ## Examples
 
-`examples/vanilla` is a plain HTML demo with a system picker (the example K dwarf, the Solar System, TRAPPIST-1 given only by its spectral type, a B5V blue dwarf and a K5III red giant) and a form to edit the star and planets.
+`examples/vanilla` is a plain HTML demo with a system picker (the example K dwarf, the Solar System with its planet presets, TRAPPIST-1 given only by its spectral type, a B5V blue dwarf and a K5III red giant) and a form to edit the star and planets.
 
 ```sh
 pnpm install
@@ -203,14 +252,14 @@ Run `pnpm --filter @larawag/visual exec playwright install chromium` once before
 The scene is the one from the "Star System Preview" prototype. Kept as it was:
 
 - The star: a limb-darkened sphere with an additive glow sprite, both tinted by the blackbody colour of Teff.
-- Planets: seeded procedural textures (blotches for rocky planets, bands for Neptune-like planets and gas giants, blue blotches under white cloud streaks for ocean worlds), and an orange emissive glow for planets hotter than 700 K.
+- Planets: seeded procedural textures (blotches for rocky planets, bands for Neptune-like planets and gas giants, blue blotches under white cloud streaks for ocean worlds), and an orange emissive glow for planets hotter than 700 K. These are the textures of `planetStyle: 'prototype'`; the default style keeps the patterns and infers the colours (see [Planet looks](#planet-looks)).
 - One unit-circle orbit line per planet, in the planet's colour, and a translucent habitable-zone ring.
 - About 1800 background stars, placed from a fixed seed.
 - Compressed scale (default): the star has radius 2, an orbit of `a` AU has radius `5 + 8 ln(1 + a / 0.05)`, and planet size grows slowly with radius (`0.35 + 0.18 Rp^0.6`, Rp in R⊕). True scale: the star has radius 1, and orbits and planets use `a / R*` and `Rp / R*`.
 - A simulation clock in days per second (the demo's speed slider is logarithmic, as in the prototype), home and transit camera presets, and orbit controls with damping.
 - Planet labels as HTML elements projected over the canvas.
 
-In `pnpm test:visual` (SwiftShader), the library's canvas is pixel-identical to the prototype's in the three compared views (home, transit, true scale).
+In `pnpm test:visual` (SwiftShader, with `planetStyle: 'prototype'`), the library's canvas is pixel-identical to the prototype's in the three compared views (home, transit, true scale).
 
 ## Known limits
 
@@ -220,6 +269,7 @@ In `pnpm test:visual` (SwiftShader), the library's canvas is pixel-identical to 
 - Larawag sets three's global `ColorManagement.enabled = false` when a view is created, which affects other three code on the same page.
 - The planet shading patch depends on the exact shader text of three 0.186.x, which is why the peer range is `>=0.186.0 <0.187.0`. If the text changes, creating a view throws a clear error instead of rendering wrong.
 - The styles are injected into `document.head`, so a view inside a shadow root is not supported yet.
+- Image textures load with `crossOrigin = 'anonymous'`, so a server without CORS headers makes the image fail and the inferred look stays.
 - Spectral types use the main-sequence table only: giants get a dwarf's Teff, and white dwarfs are not supported.
 - At true scale on very wide systems, the camera cannot zoom closer than the minimum distance scaled to fit the system (for the Solar System, the Sun stays a few pixels across).
 
