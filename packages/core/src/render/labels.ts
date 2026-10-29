@@ -23,22 +23,29 @@ export interface Labels {
   /** `positions` are world points already raised above each planet. */
   update(positions: Vector3[], camera: PerspectiveCamera, width: number, height: number): void;
   setEnabled(enabled: boolean): void;
+  /** Marks the followed planet's label with `larawag-label--followed`. */
+  setFollowed(index: number | null): void;
   dispose(): void;
 }
 
-/** Creates one `.larawag-label` per planet inside `wrapper`. */
+/** Creates one `.larawag-label` per planet inside `wrapper`; with `onClick`, labels take clicks. */
 export function createLabels(
   wrapper: HTMLElement,
   planets: { name: string; periodDays: number }[],
-  cfg: { enabled: boolean },
+  cfg: { enabled: boolean; onClick?: (index: number) => void },
 ): Labels {
   let enabled = cfg.enabled;
   const tmp = new Vector3();
-  const els = planets.map((p) => {
+  const onClick = cfg.onClick;
+  const els = planets.map((p, i) => {
     const el = document.createElement('div');
     el.className = 'larawag-label';
     el.textContent = `${p.name} · ${p.periodDays.toFixed(1)} d`;
     el.style.display = 'none';
+    if (onClick) {
+      el.classList.add('larawag-label--clickable');
+      el.addEventListener('click', () => onClick(i));
+    }
     wrapper.appendChild(el);
     return el;
   });
@@ -72,6 +79,9 @@ export function createLabels(
     setEnabled(v) {
       enabled = v;
       if (!v) hideAll();
+    },
+    setFollowed(index) {
+      els.forEach((el, i) => el.classList.toggle('larawag-label--followed', i === index));
     },
     dispose() {
       for (const el of els) el.remove();

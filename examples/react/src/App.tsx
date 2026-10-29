@@ -35,7 +35,7 @@ export function App() {
     <>
       <header>
         <h1>Larawag React demo</h1>
-        <p className="sub">The same scene as the vanilla demo, drawn through the &lt;StarSystem&gt; component. Drag to rotate, scroll to zoom.</p>
+        <p className="sub">The same scene as the vanilla demo, drawn through the &lt;StarSystem&gt; component. Drag to rotate, scroll to zoom, click a planet to follow it.</p>
       </header>
 
       <div className="ctl">
@@ -60,6 +60,7 @@ export function App() {
           rate={10 ** speed}
           scaleMode={trueScale ? 'true' : 'compressed'}
           showHabitableZone={hz}
+          followOnClick
           onError={(e) => setErrors(messages(e))}
         />
       </div>

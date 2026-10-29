@@ -63,3 +63,28 @@ export function createOverlays(wrapper: HTMLElement, cfg: OverlayConfig): Overla
     },
   };
 }
+
+/** The "Unlock camera" button (bottom-right) shown while the camera follows a planet. */
+export interface UnlockButton {
+  setVisible(visible: boolean): void;
+  dispose(): void;
+}
+
+/** Creates the hidden `button.larawag-unlock` inside `wrapper`. */
+export function createUnlockButton(wrapper: HTMLElement, onClick: () => void): UnlockButton {
+  const el = document.createElement('button');
+  el.type = 'button';
+  el.className = 'larawag-unlock';
+  el.textContent = 'Unlock camera';
+  el.hidden = true;
+  el.addEventListener('click', onClick);
+  wrapper.appendChild(el);
+  return {
+    setVisible(v) {
+      el.hidden = !v;
+    },
+    dispose() {
+      el.remove();
+    },
+  };
+}

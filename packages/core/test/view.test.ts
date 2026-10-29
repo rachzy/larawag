@@ -6,6 +6,7 @@ import { createStarSystem, LarawagValidationError } from '../src/index.js';
 import { planetAngle } from '../src/view.js';
 import type { StarSystemView } from '../src/index.js';
 import { cameraPreset } from '../src/render/camera.js';
+import { followDistance } from '../src/render/follow.js';
 import { createRenderer } from '../src/render/renderer-setup.js';
 import { appearanceTexture, planetTexture } from '../src/render/textures.js';
 import type { SystemInput } from '../src/physics/types.js';
@@ -594,5 +595,193 @@ describe('createStarSystem with a renderer', () => {
     expect(document.querySelector('style[data-larawag]')).not.toBeNull();
     b.destroy();
     expect(document.querySelector('style[data-larawag]')).toBeNull();
+  });
+});
+
+describe('followOnClick', () => {
+  beforeEach(() => useFakeRenderer());
+
+  const sized = (opts?: Parameters<typeof createStarSystem>[2]): StarSystemView => {
+    const v = make(fixture, opts);
+    const w = container.querySelector<HTMLElement>('.larawag')!;
+    Object.defineProperty(w, 'clientWidth', { configurable: true, value: 800 });
+    Object.defineProperty(w, 'clientHeight', { configurable: true, value: 400 });
+    window.dispatchEvent(new Event('resize'));
+    fake!.domElement.setPointerCapture = () => {};
+    fake!.domElement.releasePointerCapture = () => {};
+    fake!.domElement.hasPointerCapture = () => false;
+    return v;
+  };
+
+  const planetMeshes = (): Mesh[] => {
+    const scene = (fake!.render.mock.lastCall as [Scene])[0];
+    const out: Mesh[] = [];
+    scene.traverse((o) => {
+      const m = o as Mesh;
+      if (m.geometry?.type === 'SphereGeometry' && m.position.length() > 0) out.push(m);
+    });
+    return out;
+  };
+
+  /** Camera distance to planet i and the planet's offset from the screen centre (NDC). */
+  const view = (i: number): { dist: number; ndc: number } => {
+    const cam = lastCamera();
+    const p = planetMeshes()[i]!.position;
+    cam.updateMatrixWorld();
+    const s = p.clone().project(cam);
+    return { dist: cam.position.distanceTo(p), ndc: Math.hypot(s.x, s.y) };
+  };
+
+  const label = (i: number): HTMLElement => container.querySelectorAll<HTMLElement>('.larawag-label')[i]!;
+  const unlockButton = (): HTMLElement | null => container.querySelector<HTMLElement>('.larawag-unlock');
+
+  it('is off by default: labels take no clicks and nothing locks', () => {
+    const v = sized();
+    step(16);
+    expect(label(0).classList.contains('larawag-label--clickable')).toBe(false);
+    label(0).click();
+    expect(v.following).toBeNull();
+    expect(unlockButton()).toBeNull();
+  });
+
+  it('clicking a label flies to the planet, centres it and follows its orbit', () => {
+    const v = sized({ followOnClick: true });
+    const changes: (number | null)[] = [];
+    v.onFollowChange((i) => changes.push(i));
+    step(16);
+    expect(label(1).classList.contains('larawag-label--clickable')).toBe(true);
+    label(1).click();
+    expect(v.following).toBe(1);
+    expect(changes).toEqual([1]);
+    expect(label(1).classList.contains('larawag-label--followed')).toBe(true);
+    // The fly-in takes under a second of wall time.
+    for (let t = 32; t <= 1500; t += 16) step(t);
+    const first = view(1);
+    expect(first.ndc).toBeLessThan(1e-6);
+    expect(first.dist).toBeCloseTo(followDistance(planetMeshes()[1]!.scale.x, 45), 6);
+    const before = planetMeshes()[1]!.position.clone();
+    for (let t = 1516; t <= 3000; t += 16) step(t);
+    expect(planetMeshes()[1]!.position.distanceTo(before)).toBeGreaterThan(0.1);
+    const later = view(1);
+    expect(later.ndc).toBeLessThan(1e-6);
+    expect(later.dist).toBeCloseTo(first.dist, 6);
+  });
+
+  it('jumps straight to the planet under prefers-reduced-motion', () => {
+    stubMatchMedia(true);
+    const v = sized({ followOnClick: true });
+    step(16);
+    v.follow(0);
+    step(32);
+    expect(view(0).ndc).toBeLessThan(1e-6);
+    expect(view(0).dist).toBeCloseTo(followDistance(planetMeshes()[0]!.scale.x, 45), 6);
+  });
+
+  it('clicking the planet on the canvas locks; a drag does not', () => {
+    const v = sized({ followOnClick: true, autoplay: false });
+    step(16);
+    const cam = lastCamera();
+    cam.updateMatrixWorld();
+    const s = planetMeshes()[0]!.position.clone().project(cam);
+    const x = (s.x * 0.5 + 0.5) * 800;
+    const y = (-s.y * 0.5 + 0.5) * 400;
+    const canvas = fake!.domElement;
+    const press = (type: string, cx: number, cy: number): void => {
+      canvas.dispatchEvent(new PointerEvent(type, { clientX: cx, clientY: cy, button: 0, pointerId: 1, bubbles: true }));
+    };
+    press('pointerdown', x, y);
+    press('pointerup', x + 30, y);
+    expect(v.following).toBeNull();
+    press('pointerdown', x, y);
+    press('pointerup', x + 1, y);
+    expect(v.following).toBe(0);
+  });
+
+  it('only Esc and the unlock button unlock; the camera stays where it is', () => {
+    const v = sized({ followOnClick: true });
+    const changes: (number | null)[] = [];
+    v.onFollowChange((i) => changes.push(i));
+    step(16);
+    label(0).click();
+    expect(unlockButton()).not.toBeNull();
+    expect(unlockButton()!.hidden).toBe(false);
+    label(0).click();
+    expect(v.following).toBe(0);
+    label(1).click();
+    expect(v.following).toBe(1);
+    step(32);
+    const pos = lastCamera().position.clone();
+    unlockButton()!.click();
+    expect(v.following).toBeNull();
+    expect(unlockButton()!.hidden).toBe(true);
+    expect(lastCamera().position.toArray()).toEqual(pos.toArray());
+    v.follow(0);
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(v.following).toBeNull();
+    expect(changes).toEqual([0, 1, null, 0, null]);
+  });
+
+  it('follow() and unfollow() work without the option; bad indexes are ignored', () => {
+    const v = sized();
+    step(16);
+    v.follow(5);
+    v.follow(-1);
+    v.follow(0.5);
+    expect(v.following).toBeNull();
+    v.follow(1);
+    expect(v.following).toBe(1);
+    expect(unlockButton()!.hidden).toBe(false);
+    v.unfollow();
+    expect(v.following).toBeNull();
+  });
+
+  it('setView unlocks; setScaleMode keeps the lock and reframes', () => {
+    const v = sized({ followOnClick: true });
+    step(16);
+    v.follow(0);
+    v.setView('transit');
+    expect(v.following).toBeNull();
+    expectNear(lastCamera().position.toArray(), cameraPreset('compressed', 'transit'));
+    v.follow(0);
+    v.setScaleMode('true');
+    expect(v.following).toBe(0);
+    for (let t = 32; t <= 1500; t += 16) step(t);
+    expect(view(0).ndc).toBeLessThan(1e-6);
+    expect(view(0).dist).toBeLessThan(1);
+  });
+
+  it('keeps the followed planet and its label on screen at true scale', () => {
+    const v = sized({ followOnClick: true, scaleMode: 'true' });
+    step(16);
+    v.follow(0);
+    for (let t = 32; t <= 2000; t += 16) step(t);
+    expect(view(0).ndc).toBeLessThan(1e-6);
+    expect(label(0).style.display).not.toBe('none');
+    expect(parseFloat(label(0).style.left)).toBeCloseTo(400, 0);
+  });
+
+  it('setSystem keeps a planet index that still exists and drops one that does not', () => {
+    const v = sized({ followOnClick: true });
+    step(16);
+    v.follow(1);
+    v.setSystem({ ...fixture, planets: [...fixture.planets, { radius: 1, period: 40 }] });
+    expect(v.following).toBe(1);
+    expect(label(1).classList.contains('larawag-label--followed')).toBe(true);
+    v.setSystem({ ...fixture, planets: [{ radius: 1, period: 3 }] });
+    expect(v.following).toBeNull();
+  });
+
+  it('destroy() removes the button and the Esc listener', () => {
+    const v = sized({ followOnClick: true });
+    const changes: (number | null)[] = [];
+    v.onFollowChange((i) => changes.push(i));
+    step(16);
+    v.follow(0);
+    v.destroy();
+    expect(unlockButton()).toBeNull();
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(changes).toEqual([0]);
+    v.follow(1);
+    expect(v.following).toBeNull();
   });
 });
