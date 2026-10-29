@@ -1,6 +1,28 @@
 {
   "name": "@larawag/angular",
-  "version": "0.0.0",
+  "version": "0.1.1",
+  "description": "Angular 22 standalone component for @larawag/core, the three.js view of a hypothetical planetary system.",
+  "keywords": [
+    "angular",
+    "three",
+    "threejs",
+    "exoplanet",
+    "planetary-system",
+    "astronomy",
+    "visualization",
+    "3d"
+  ],
+  "license": "MIT",
+  "author": "rach",
+  "homepage": "https://github.com/rachzy/larawag/tree/main/packages/angular#readme",
+  "bugs": {
+    "url": "https://github.com/rachzy/larawag/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rachzy/larawag.git",
+    "directory": "packages/angular"
+  },
   "sideEffects": false,
   "scripts": {
     "build": "ng build",
@@ -32,6 +54,7 @@
     "vitest": "5.0.5"
   },
   "publishConfig": {
+    "access": "public",
     "directory": "dist"
   }
 }
