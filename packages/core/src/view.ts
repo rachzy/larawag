@@ -22,7 +22,7 @@ export interface ViewOptions {
   rate?: number;
   /** Default true, but false under prefers-reduced-motion. */
   autoplay?: boolean;
-  /** At true scale, minimum planet size in pixels. Default 0 (off). */
+  /** At true scale, minimum planet diameter in pixels. Default 8 (0 with `planetStyle: 'prototype'`); 0 is off. */
   minPlanetPixels?: number;
   /**
    * Default 'inferred': planets without a texture or colour get a look guessed from class and
@@ -68,6 +68,7 @@ export interface StarSystemView {
 
 const DEFAULT_FALLBACK = 'WebGL is not available in this browser, so the 3D view cannot start.';
 const DEFAULT_RATE = 10 ** 0.2;
+const DEFAULT_MIN_PLANET_PIXELS = 8;
 const SPIN_RATE = 0.8;
 
 /** Planet orbital angle in radians after `days` of simulated time. */
@@ -106,11 +107,13 @@ export function createStarSystem(
   let mode: ScaleMode = validMode(options.scaleMode) ? options.scaleMode : 'compressed';
   let rate = validRate(options.rate) ? options.rate : DEFAULT_RATE;
   let showHz = options.showHabitableZone ?? true;
-  const minPlanetPixels =
-    typeof options.minPlanetPixels === 'number' && options.minPlanetPixels > 0
-      ? options.minPlanetPixels
-      : 0;
   const planetStyle: PlanetStyle = options.planetStyle === 'prototype' ? 'prototype' : 'inferred';
+  const minPlanetPixels =
+    typeof options.minPlanetPixels === 'number' && Number.isFinite(options.minPlanetPixels)
+      ? Math.max(0, options.minPlanetPixels)
+      : planetStyle === 'prototype'
+        ? 0
+        : DEFAULT_MIN_PLANET_PIXELS;
   let overlayState = mergeOverlays({ labels: true, clock: true, badge: true }, options.overlays);
   let simDays = 0;
   let destroyed = false;

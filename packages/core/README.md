@@ -67,7 +67,7 @@ The third argument of `createStarSystem` is optional. Every field is optional to
 | `showHabitableZone` | `boolean` | `true` | Draws the translucent habitable-zone band. |
 | `rate` | `number` | `10 ** 0.2` (about 1.58) | Simulated days per second. |
 | `autoplay` | `boolean` | `true` | Starts the clock running. Starts paused when the user prefers reduced motion. |
-| `minPlanetPixels` | `number` | `0` | True scale only. Minimum on-screen diameter of a planet in pixels; smaller planets are drawn larger. `0` turns it off. |
+| `minPlanetPixels` | `number` | `8` (`0` with `planetStyle: 'prototype'`) | True scale only. Minimum on-screen diameter of a planet in pixels, so small planets stay visible; they are drawn larger than their true size. `0` turns it off and shows true sizes. |
 | `overlays.labels` | `boolean` | `true` | Planet labels projected over the canvas. |
 | `overlays.clock` | `boolean \| { format }` | `true` | Simulated-time readout. `format` is `(days: number) => string`. |
 | `overlays.badge` | `boolean \| { text }` | `true` | The "Hypothetical · artist's impression" badge. `text` replaces its wording. |
@@ -81,7 +81,7 @@ createStarSystem(container, input, {
   showHabitableZone: true,
   rate: 10 ** 0.2,
   autoplay: true,
-  minPlanetPixels: 0,
+  minPlanetPixels: 8,
   overlays: {
     labels: true,
     clock: true,
