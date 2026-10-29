@@ -1,5 +1,7 @@
 # Larawag
 
+[![npm](https://img.shields.io/npm/v/@larawag/core)](https://www.npmjs.com/package/@larawag/core)
+
 A small, framework-agnostic library that draws a hypothetical planetary system with three.js. You give it a star and a list of planets as numbers; it renders an interactive 3D scene into an element you provide.
 
 Everything drawn is hypothetical. The library picks a plausible look from a few numbers and never claims to know a planet's composition, atmosphere or surface. Show your own "artist's impression" wording next to it, or keep the built-in badge.

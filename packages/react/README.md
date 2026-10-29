@@ -1,5 +1,7 @@
 # @larawag/react
 
+[![npm](https://img.shields.io/npm/v/@larawag/react)](https://www.npmjs.com/package/@larawag/react)
+
 React 19 bindings for [`@larawag/core`](https://www.npmjs.com/package/@larawag/core), which draws a hypothetical single-star planetary system with three.js. Everything drawn is hypothetical: the look is a guess from a few numbers, never a claim about a real planet's composition or surface.
 
 ## Install
