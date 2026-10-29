@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "declaration": false,
+    "jsx": "react-jsx",
+    "types": ["vite/client"],
+    "paths": {
+      "@larawag/core": ["../../packages/core/src/index.ts"],
+      "@larawag/core/physics": ["../../packages/core/src/physics.ts"],
+      "@larawag/react": ["../../packages/react/src/index.ts"]
+    }
+  },
+  "include": ["src", "../vanilla/systems.ts"]
+}
