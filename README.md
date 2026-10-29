@@ -1,5 +1,7 @@
 # Larawag
 
+[![npm](https://img.shields.io/npm/v/@larawag/core)](https://www.npmjs.com/package/@larawag/core) [![npm](https://img.shields.io/npm/v/@larawag/react)](https://www.npmjs.com/package/@larawag/react)
+
 A small, framework-agnostic library that draws a hypothetical planetary system with three.js. You give it a star and a list of planets as numbers; it renders an interactive 3D scene into an element you provide.
 
 
