@@ -2,7 +2,25 @@
 
 A small, framework-agnostic library that draws a hypothetical planetary system with three.js. You give it a star and a list of planets as numbers; it renders an interactive 3D scene into an element you provide.
 
+
 Everything drawn is hypothetical. The library picks a plausible look from a few numbers and never claims to know a planet's composition, atmosphere or surface. Show your own "artist's impression" wording next to it, or keep the built-in badge.
+
+## Preview
+
+### Solar System
+
+<figure>
+  <img width="975" height="556" alt="image" src="https://github.com/user-attachments/assets/7b911e8c-d6be-4d32-baec-35887e7a3b2f" alt="Solar System rendered through Larawag" />
+  <figcaption><i>Solar System rendered through Larawag</i></figcaption>
+</figure>
+
+### Example K Dwarf (hypothetical planets)
+
+<figure>
+  <img width="969" height="549" alt="image" src="https://github.com/user-attachments/assets/84bea95f-4667-444f-8be1-a453142bbf08" alt="Hypothetical K Dwarf stellar system rendered through Larawag" />
+  <figcaption><i>Hypothetical K Dwarf stellar system rendered through Larawag</i></figcaption>
+</figure>
+
 
 ## Install
 
