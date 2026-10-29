@@ -70,6 +70,7 @@ The third argument of `createStarSystem` is optional. Every field is optional to
 | `rate` | `number` | `10 ** 0.2` (about 1.58) | Simulated days per second. |
 | `autoplay` | `boolean` | `true` | Starts the clock running. Starts paused when the user prefers reduced motion. |
 | `minPlanetPixels` | `number` | `8` (`0` with `planetStyle: 'prototype'`) | True scale only. Minimum on-screen diameter of a planet in pixels, so small planets stay visible; they are drawn larger than their true size. `0` turns it off and shows true sizes. |
+| `followOnClick` | `boolean` | `false` | Clicking a planet or its label locks the camera on that planet (see [Following a planet](#following-a-planet)). |
 | `overlays.labels` | `boolean` | `true` | Planet labels projected over the canvas. |
 | `overlays.clock` | `boolean \| { format }` | `true` | Simulated-time readout. `format` is `(days: number) => string`. |
 | `overlays.badge` | `boolean \| { text }` | `true` | The "Hypothetical · artist's impression" badge. `text` replaces its wording. |
@@ -84,6 +85,7 @@ createStarSystem(container, input, {
   rate: 10 ** 0.2,
   autoplay: true,
   minPlanetPixels: 8,
+  followOnClick: false,
   overlays: {
     labels: true,
     clock: true,
@@ -110,19 +112,29 @@ createStarSystem(container, input, {
 | `setHabitableZoneVisible(visible)` | Shows or hides the habitable-zone band. |
 | `setView('home' \| 'transit')` | Moves the camera to a preset: above and angled, or in the orbital plane so planets cross the star. |
 | `resetView()` | Same as `setView('home')`. |
+| `follow(index)` | Locks the camera on planet `index` (in input order); ignored when there is no such planet. Works with or without `followOnClick`. |
+| `unfollow()` | Releases the camera where it is. |
+| `following` | Read-only. Index of the followed planet, or `null`. |
+| `onFollowChange(callback)` | Calls `callback(index)` when the camera locks on a planet and `callback(null)` when it is released. Returns a function that unsubscribes. |
 | `setSystem(input)` | Replaces the system (see below). |
 | `setOverlays(overlays)` | Changes the `overlays` options after creation. |
 | `onTick(callback)` | Calls `callback(days)` every frame. Returns a function that unsubscribes. |
 | `destroy()` | Releases everything (see below). Safe to call twice. |
 | `system` | Read-only. The derived values for the current system. |
 
-`setSystem` validates first. On an error it throws and the old system keeps running. On success it rebuilds the scene and keeps the camera, scale mode, play state, rate and simulated time, except that the camera goes back to the home view when the new system's outer orbit changes how far the camera must sit.
+`setSystem` validates first. On an error it throws and the old system keeps running. On success it rebuilds the scene and keeps the camera, scale mode, play state, rate and simulated time, except that the camera goes back to the home view when the new system's outer orbit changes how far the camera must sit. A followed planet stays followed when the new system still has a planet at that index; otherwise the camera is released.
 
 `destroy()` stops the loop, disposes geometries, materials, textures and the renderer, removes listeners, labels and the injected style, and can be called twice. If WebGL fails to start, `createStarSystem` shows `fallbackText` and returns a view whose methods do nothing (`setSystem` still validates and updates `system`).
 
+## Following a planet
+
+With `followOnClick: true`, clicking a planet or its label flies the camera to that planet in under a second (instantly under reduced motion) and then moves it along with the planet, so the planet stays in the centre of the view while it orbits. Dragging still rotates around the planet and the wheel still zooms; panning is off while the camera is locked. Clicking another planet switches to it; clicking the followed one again does nothing.
+
+Only two things release the camera: the Esc key and the "Unlock camera" button that appears in the bottom-right corner while a planet is followed. `setView` and `resetView` also release it, since they move the camera elsewhere; `setScaleMode` keeps the planet and frames it again at the new scale. The camera stays where it was when released.
+
 ## Styling the overlays
 
-Only the text overlays can be restyled; the 3D scene is fixed. Set these CSS variables on the container or any ancestor, or style the classes `larawag-label`, `larawag-clock`, `larawag-badge` and `larawag-fallback` directly.
+Only the text overlays can be restyled; the 3D scene is fixed. Set these CSS variables on the container or any ancestor, or style the classes `larawag-label`, `larawag-clock`, `larawag-badge`, `larawag-unlock` and `larawag-fallback` directly. With `followOnClick`, labels also get `larawag-label--clickable`, and the followed planet's label gets `larawag-label--followed`.
 
 | Variable | Default |
 |---|---|
@@ -133,6 +145,10 @@ Only the text overlays can be restyled; the 3D scene is fixed. Set these CSS var
 | `--larawag-clock-color` | `#8e97b8` (also colours the fallback text) |
 | `--larawag-badge-color` | `#e8b04a` (also the badge border) |
 | `--larawag-badge-bg` | `rgba(7,10,20,.65)` |
+| `--larawag-label-followed-border` | `#e8b04a` (border of the followed planet's label) |
+| `--larawag-unlock-color` | `#e6e9f5` |
+| `--larawag-unlock-bg` | `rgba(7,10,20,.65)` |
+| `--larawag-unlock-border` | `#232a47` |
 
 Larawag does not load fonts.
 
@@ -147,6 +163,7 @@ The scene is the one from the "Star System Preview" prototype. Kept as it was:
 - Compressed scale (default): the star has radius 2, an orbit of `a` AU has radius `5 + 8 ln(1 + a / 0.05)`, and planet size grows slowly with radius (`0.35 + 0.18 Rp^0.6`, Rp in R⊕). True scale: the star has radius 1, and orbits and planets use `a / R*` and `Rp / R*`.
 - A simulation clock in days per second (the demo's speed slider is logarithmic, as in the prototype), home and transit camera presets, and orbit controls with damping.
 - Planet labels as HTML elements projected over the canvas.
+- Not in the prototype: with `followOnClick`, the camera can follow a planet. It is off by default, so the default scene matches the prototype.
 
 In `pnpm test:visual` (SwiftShader), the library's canvas is pixel-identical to the prototype's in the three compared views (home, transit, true scale).
 
@@ -155,10 +172,12 @@ In `pnpm test:visual` (SwiftShader), the library's canvas is pixel-identical to 
 - Tested headless (SwiftShader) first; check a real GPU, touch controls and small viewports before relying on it.
 - Planet markers at true scale can be smaller than a pixel.
 - Labels are spread out vertically to avoid overlap in every view, but crowded systems can still be busy.
+- Orbit lines are drawn as polygons, so when following a planet up close at true scale, its orbit line can cross in front of the planet.
+- Esc releases a followed planet in every view on the page, since the key is heard on the window.
 - Larawag sets three's global `ColorManagement.enabled = false` when a view is created, which affects other three code on the same page.
 - The planet shading patch depends on the exact shader text of three 0.186.x, which is why the peer range is `>=0.186.0 <0.187.0`. If the text changes, creating a view throws a clear error instead of rendering wrong.
 - The styles are injected into `document.head`, so a view inside a shadow root is not supported yet.
-- At true scale on very wide systems, the camera cannot zoom closer than the minimum distance scaled to fit the system (for the Solar System, the Sun stays a few pixels across).
+- At true scale on very wide systems, the camera cannot zoom closer than the minimum distance scaled to fit the system (for the Solar System, the Sun stays a few pixels across). Following a planet lifts this limit for that planet.
 
 ## TO-DO
 

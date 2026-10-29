@@ -260,6 +260,7 @@ function start(preset: Preset): void {
   fillForm(preset.input);
   showErrors([]);
   view = createStarSystem(stage, preset.input, {
+    followOnClick: true,
     ...preset.options,
     rate: 10 ** preset.rateSlider,
   });

@@ -172,9 +172,35 @@ describe('useStarSystem', () => {
     expect(two).toHaveBeenCalledTimes(1);
   });
 
+  it('passes followOnClick at creation and rebuilds when it changes', () => {
+    const { rerender } = render(<Host system={sysA} followOnClick />);
+    expect(created[0]!.options.followOnClick).toBe(true);
+    rerender(<Host system={sysA} />);
+    expect(created[0]!.destroyed).toBe(true);
+    expect(live()[0]!.options.followOnClick).toBeUndefined();
+  });
+
+  it('calls the latest onFollowChange without resubscribing', () => {
+    const one = vi.fn();
+    const two = vi.fn();
+    const { rerender } = render(<Host system={sysA} onFollowChange={one} />);
+    const v = created[0]!;
+    act(() => v.followChange(0));
+    expect(one).toHaveBeenCalledWith(0);
+    rerender(<Host system={sysA} onFollowChange={two} />);
+    act(() => v.followChange(null));
+    expect(two).toHaveBeenCalledWith(null);
+    expect(one).toHaveBeenCalledTimes(1);
+    expect(v.onFollowChange).toHaveBeenCalledTimes(1);
+  });
+
   it('forwards handle methods to the live view', () => {
     render(<Host system={sysA} />);
     const v = created[0]!;
+    handle!.follow(1);
+    handle!.unfollow();
+    expect(v.follow).toHaveBeenCalledWith(1);
+    expect(v.unfollow).toHaveBeenCalled();
     handle!.play();
     handle!.pause();
     handle!.setTime(7);

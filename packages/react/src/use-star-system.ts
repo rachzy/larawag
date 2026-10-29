@@ -21,6 +21,10 @@ export interface StarSystemProps {
   fallbackText?: string;
   /** Creation only: a change rebuilds the view. */
   planetStyle?: ViewOptions['planetStyle'];
+  /** Creation only: a change rebuilds the view. Clicking a planet or its label locks the camera on it. */
+  followOnClick?: boolean;
+  /** Called with the followed planet's index when the camera locks, and null when it is released. */
+  onFollowChange?: (index: number | null) => void;
   /** Called every frame with the simulated time in days. */
   onTick?: (days: number) => void;
   /** Called when the system is invalid. The previous system, if any, stays on screen. */
@@ -36,6 +40,10 @@ export interface StarSystemHandle {
   setTime(days: number): void;
   setView(preset: 'home' | 'transit'): void;
   resetView(): void;
+  /** Locks the camera on planet `index`. */
+  follow(index: number): void;
+  /** Releases the camera where it is. */
+  unfollow(): void;
 }
 
 type Overlays = ViewOptions['overlays'];
@@ -64,7 +72,8 @@ export function useStarSystem(
   system: SystemInput,
   props: StarSystemProps = {},
 ): StarSystemHandle {
-  const { scaleMode, showHabitableZone, rate, overlays, playing, autoplay, minPlanetPixels, fallbackText, planetStyle } = props;
+  const { scaleMode, showHabitableZone, rate, overlays, playing, autoplay, minPlanetPixels, fallbackText, planetStyle, followOnClick } =
+    props;
   const latest = useRef({ system, props });
   useLayoutEffect(() => {
     latest.current = { system, props };
@@ -90,8 +99,10 @@ export function useStarSystem(
         minPlanetPixels: p.minPlanetPixels,
         fallbackText: p.fallbackText,
         planetStyle: p.planetStyle,
+        followOnClick: p.followOnClick,
       });
       view.onTick((days) => latest.current.props.onTick?.(days));
+      view.onFollowChange((index) => latest.current.props.onFollowChange?.(index));
       if (savedTime.current > 0) view.setTime(savedTime.current);
       applied.current = {
         scaleMode: p.scaleMode,
@@ -117,7 +128,7 @@ export function useStarSystem(
         view.destroy();
       }
     };
-  }, [containerRef, autoplay, minPlanetPixels, fallbackText, planetStyle]);
+  }, [containerRef, autoplay, minPlanetPixels, fallbackText, planetStyle, followOnClick]);
 
   useEffect(() => {
     if (systemKey === attempted.current) return;
@@ -179,6 +190,8 @@ export function useStarSystem(
       setTime: (days) => viewRef.current?.setTime(days),
       setView: (preset) => viewRef.current?.setView(preset),
       resetView: () => viewRef.current?.resetView(),
+      follow: (index) => viewRef.current?.follow(index),
+      unfollow: () => viewRef.current?.unfollow(),
     }),
     [],
   );

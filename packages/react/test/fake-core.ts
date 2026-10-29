@@ -9,6 +9,8 @@ export interface FakeView extends Omit<StarSystemView, 'playing'> {
   destroyed: boolean;
   ticks: Set<(days: number) => void>;
   tick(days: number): void;
+  /** Simulates the view reporting a follow change. */
+  followChange(index: number | null): void;
 }
 
 export const created: FakeView[] = [];
@@ -18,6 +20,7 @@ export const createStarSystem = vi.fn((container: HTMLElement, input: SystemInpu
   if ((input as { invalid?: boolean }).invalid) throw new Error('invalid system');
   let time = 0;
   const ticks = new Set<(days: number) => void>();
+  const followCbs = new Set<(index: number | null) => void>();
   const view: FakeView = {
     container,
     input,
@@ -49,6 +52,13 @@ export const createStarSystem = vi.fn((container: HTMLElement, input: SystemInpu
       if ((next as { invalid?: boolean }).invalid) throw new Error('invalid system');
     }),
     setOverlays: vi.fn(),
+    following: null,
+    follow: vi.fn(),
+    unfollow: vi.fn(),
+    onFollowChange: vi.fn((cb: (index: number | null) => void) => {
+      followCbs.add(cb);
+      return () => followCbs.delete(cb);
+    }),
     onTick: vi.fn((cb: (days: number) => void) => {
       ticks.add(cb);
       return () => ticks.delete(cb);
@@ -58,6 +68,9 @@ export const createStarSystem = vi.fn((container: HTMLElement, input: SystemInpu
     }),
     tick(days: number) {
       for (const cb of ticks) cb(days);
+    },
+    followChange(index: number | null) {
+      for (const cb of followCbs) cb(index);
     },
   };
   created.push(view);

@@ -91,6 +91,10 @@ describe('injectStyles', () => {
     const b = injectStyles();
     expect(document.head.querySelectorAll('style[data-larawag]').length).toBe(1);
     expect(document.head.querySelector('style[data-larawag]')!.textContent).toContain('--larawag-label-color');
+    const css = document.head.querySelector('style[data-larawag]')!.textContent!;
+    for (const cls of ['.larawag-label', '.larawag-unlock']) {
+      expect(css).toMatch(new RegExp(`\\${cls}\\{[^}]*user-select:none`));
+    }
     a();
     expect(document.head.querySelectorAll('style[data-larawag]').length).toBe(1);
     b();

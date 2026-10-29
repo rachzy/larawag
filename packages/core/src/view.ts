@@ -3,8 +3,9 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { deriveSystem, type DerivedSystem } from './physics/derive.js';
 import type { SystemInput } from './physics/types.js';
 import { cameraFit, cameraPreset } from './render/camera.js';
+import { easeInOut, followDistance, pickPlanet } from './render/follow.js';
 import { createLabels, type Labels } from './render/labels.js';
-import { createOverlays, type OverlayConfig } from './render/overlays.js';
+import { createOverlays, createUnlockButton, type OverlayConfig, type UnlockButton } from './render/overlays.js';
 import { createRenderer } from './render/renderer-setup.js';
 import { planetRadius, type ScaleMode } from './render/scales.js';
 import type { PlanetStyle } from './render/planets.js';
@@ -29,6 +30,11 @@ export interface ViewOptions {
    * temperature. 'prototype' gives them the v1 prototype's textures instead.
    */
   planetStyle?: 'inferred' | 'prototype';
+  /**
+   * Default false. When true, clicking a planet or its label locks the camera on that planet and
+   * follows its orbit; Esc or the "Unlock camera" button releases it.
+   */
+  followOnClick?: boolean;
   overlays?: {
     /** Default true. */
     labels?: boolean;
@@ -60,6 +66,14 @@ export interface StarSystemView {
   /** Validates first; on error throws and keeps the old system. */
   setSystem(input: SystemInput): void;
   setOverlays(overlays: ViewOptions['overlays']): void;
+  /** Index of the planet the camera follows, or null. */
+  readonly following: number | null;
+  /** Locks the camera on planet `index` (ignored if there is no such planet). */
+  follow(index: number): void;
+  /** Releases the camera where it is. */
+  unfollow(): void;
+  /** Calls `cb(index)` when the followed planet changes (null when released). Returns an unsubscribe function. */
+  onFollowChange(cb: (index: number | null) => void): () => void;
   /** Calls `cb(days)` every frame. Returns an unsubscribe function. */
   onTick(cb: (days: number) => void): () => void;
   /** Idempotent. */
@@ -70,6 +84,10 @@ const DEFAULT_FALLBACK = 'WebGL is not available in this browser, so the 3D view
 const DEFAULT_RATE = 10 ** 0.2;
 const DEFAULT_MIN_PLANET_PIXELS = 8;
 const SPIN_RATE = 0.8;
+const FLIGHT_MS = 800;
+const NEAR = 0.05;
+/** A press that moves less than this many pixels before release is a click, not a drag. */
+const CLICK_SLOP = 5;
 
 /** Planet orbital angle in radians after `days` of simulated time. */
 export function planetAngle(phase: number, periodDays: number, days: number): number {
@@ -108,6 +126,7 @@ export function createStarSystem(
   let rate = validRate(options.rate) ? options.rate : DEFAULT_RATE;
   let showHz = options.showHabitableZone ?? true;
   const planetStyle: PlanetStyle = options.planetStyle === 'prototype' ? 'prototype' : 'inferred';
+  const followOnClick = options.followOnClick === true;
   const minPlanetPixels =
     typeof options.minPlanetPixels === 'number' && Number.isFinite(options.minPlanetPixels)
       ? Math.max(0, options.minPlanetPixels)
@@ -146,6 +165,9 @@ export function createStarSystem(
       get scaleMode() {
         return mode;
       },
+      get following() {
+        return null;
+      },
       play: noop,
       pause: noop,
       setRate: noop,
@@ -155,6 +177,9 @@ export function createStarSystem(
       setView: noop,
       resetView: noop,
       setOverlays: noop,
+      follow: noop,
+      unfollow: noop,
+      onFollowChange: () => noop,
       setSystem(next) {
         if (destroyed) return;
         system = deriveSystem(next);
@@ -183,7 +208,7 @@ export function createStarSystem(
   try {
     let playing = options.autoplay ?? !prefersReducedMotion();
     const scene = new Scene();
-    const camera = new PerspectiveCamera(45, 1, 0.05, 6000);
+    const camera = new PerspectiveCamera(45, 1, NEAR, 6000);
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.08;
@@ -194,7 +219,16 @@ export function createStarSystem(
     let pieces: SystemScene = buildSystemScene(system, mode, showHz, planetStyle);
     undo.push(() => pieces.dispose());
     scene.add(pieces.root);
-    let labels: Labels = createLabels(wrapper, system.planets, { enabled: overlayState.labels });
+    let followed: number | null = null;
+    let flight: { start: number; fromCam: Vector3; fromTarget: Vector3 } | null = null;
+    let unlockButton: UnlockButton | null = null;
+    const followPos = new Vector3();
+    const followDir = new Vector3();
+    const followChanges = new Set<(index: number | null) => void>();
+    const labelClick = followOnClick ? (i: number): void => follow(i) : undefined;
+    const makeLabels = (): Labels =>
+      createLabels(wrapper, system.planets, { enabled: overlayState.labels, onClick: labelClick });
+    let labels: Labels = makeLabels();
     undo.push(() => labels.dispose());
     const overlays = createOverlays(wrapper, overlayState);
     undo.push(() => overlays.dispose());
@@ -222,12 +256,104 @@ export function createStarSystem(
       return true;
     };
 
+    const emitFollow = (): void => {
+      for (const cb of followChanges) {
+        try {
+          cb(followed);
+        } catch (e) {
+          setTimeout(() => {
+            throw e;
+          });
+        }
+      }
+    };
+
+    /** Planet radius in scene units at its true drawn size, rings included. */
+    const followExtent = (i: number): number => {
+      const p = pieces.bodies[i]!.planet;
+      return planetRadius(mode, p.radiusEarth, p.rpOverRs, 0) * Math.max(1, p.rings?.outer ?? 1);
+    };
+
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape' && !e.defaultPrevented) unfollow();
+    };
+
+    /** Starts (or restarts) the fly-in to planet `i` and keeps following it. */
+    const lockOn = (i: number): void => {
+      const changed = followed !== i;
+      if (followed === null) window.addEventListener('keydown', onKey);
+      followed = i;
+      flight = { start: -1, fromCam: camera.position.clone(), fromTarget: controls.target.clone() };
+      const extent = followExtent(i);
+      controls.enabled = false;
+      controls.enablePan = false;
+      controls.minDistance = extent * 1.5;
+      camera.near = Math.min(NEAR, extent * 0.5);
+      camera.updateProjectionMatrix();
+      labels.setFollowed(i);
+      unlockButton ??= createUnlockButton(wrapper, unfollow);
+      unlockButton.setVisible(true);
+      if (changed) emitFollow();
+    };
+
+    /** Locks on planet `i` unless it is already followed or does not exist. */
+    const follow = (i: number): void => {
+      if (i === followed || !Number.isInteger(i) || i < 0 || i >= pieces.bodies.length) return;
+      lockOn(i);
+    };
+
+    const unfollow = (): void => {
+      if (followed === null) return;
+      followed = null;
+      flight = null;
+      window.removeEventListener('keydown', onKey);
+      controls.enabled = true;
+      controls.enablePan = true;
+      controls.minDistance = 3 * fit;
+      camera.near = NEAR;
+      camera.updateProjectionMatrix();
+      labels.setFollowed(null);
+      unlockButton?.setVisible(false);
+      emitFollow();
+    };
+    undo.push(() => {
+      window.removeEventListener('keydown', onKey);
+      unlockButton?.dispose();
+    });
+
+    /** Moves the camera along with the followed planet; call after the planets moved. */
+    const updateFollow = (now: number): void => {
+      if (followed === null) return;
+      const p = pieces.bodies[followed]!.mesh.position;
+      if (flight) {
+        if (flight.start < 0) flight.start = now;
+        const t = prefersReducedMotion() ? 1 : (now - flight.start) / FLIGHT_MS;
+        const e = easeInOut(t);
+        followDir.subVectors(flight.fromCam, p).normalize();
+        if (followDir.lengthSq() === 0) followDir.set(0, 0, 1);
+        followDir.multiplyScalar(followDistance(followExtent(followed), camera.fov)).add(p);
+        controls.target.lerpVectors(flight.fromTarget, p, e);
+        camera.position.lerpVectors(flight.fromCam, followDir, e);
+        if (t >= 1) {
+          flight = null;
+          controls.enabled = true;
+        }
+      } else {
+        followDir.subVectors(p, followPos);
+        camera.position.add(followDir);
+        controls.target.add(followDir);
+      }
+      followPos.copy(p);
+    };
+
     const setView = (kind: 'home' | 'transit'): void => {
       const p = cameraPreset(mode, kind, fit);
       camera.position.set(p[0], p[1], p[2]);
       controls.target.set(0, 0, 0);
       controls.update();
     };
+
+    const tanHalfFov = (): number => Math.tan(((camera.fov * Math.PI) / 180) / 2);
 
     let last = performance.now();
     let rafId = 0;
@@ -270,6 +396,42 @@ export function createStarSystem(
     setView('home');
     syncLabelPositions();
 
+    let press: { id: number; x: number; y: number } | null = null;
+    const pickPoint = new Vector3();
+    const onPointerDown = (e: PointerEvent): void => {
+      press = e.button === 0 ? { id: e.pointerId, x: e.clientX, y: e.clientY } : null;
+    };
+    const onPointerUp = (e: PointerEvent): void => {
+      const p = press;
+      press = null;
+      if (!p || p.id !== e.pointerId || Math.hypot(e.clientX - p.x, e.clientY - p.y) > CLICK_SLOP) return;
+      if (!width || !height) return;
+      const rect = renderer.domElement.getBoundingClientRect();
+      camera.updateMatrixWorld();
+      const points = pieces.bodies.map((b) => {
+        pickPoint.copy(b.mesh.position).project(camera);
+        if (pickPoint.z >= 1) return null;
+        const dist = camera.position.distanceTo(b.mesh.position);
+        const ppu = height / (2 * tanHalfFov() * dist);
+        return {
+          x: (pickPoint.x * 0.5 + 0.5) * width,
+          y: (-pickPoint.y * 0.5 + 0.5) * height,
+          r: b.mesh.scale.x * ppu,
+        };
+      });
+      const hit = pickPlanet(points, e.clientX - rect.left, e.clientY - rect.top);
+      if (hit !== null) follow(hit);
+    };
+    if (followOnClick) {
+      renderer.domElement.addEventListener('pointerdown', onPointerDown);
+      renderer.domElement.addEventListener('pointerup', onPointerUp);
+    }
+    const removePointer = (): void => {
+      renderer.domElement.removeEventListener('pointerdown', onPointerDown);
+      renderer.domElement.removeEventListener('pointerup', onPointerUp);
+    };
+    undo.push(removePointer);
+
     let observer: ResizeObserver | null = null;
     if (typeof ResizeObserver === 'function') {
       observer = new ResizeObserver(resize);
@@ -283,7 +445,6 @@ export function createStarSystem(
     });
     resize();
 
-    const tanHalfFov = (): number => Math.tan(((camera.fov * Math.PI) / 180) / 2);
 
     const frame = (now: number): void => {
       if (failed || destroyed) return;
@@ -292,11 +453,20 @@ export function createStarSystem(
       const dt = Math.min(0.1, Math.max(0, (now - last) / 1000));
       last = now;
       if (playing) simDays += dt * rate;
-      const grow = mode === 'true' && minPlanetPixels > 0 && height > 0;
-      pieces.bodies.forEach((b, i) => {
+      for (const b of pieces.bodies) {
         const th = planetAngle(b.planet.phase, b.planet.periodDays, simDays);
         b.mesh.position.set(b.orbitRadius * Math.cos(th), 0, b.orbitRadius * Math.sin(th));
         b.mesh.rotation.y += playing ? dt * SPIN_RATE : 0;
+      }
+      // A followed planet can move many camera distances per frame, so aim the camera before projecting.
+      const following = followed !== null;
+      if (following) {
+        updateFollow(now);
+        controls.update();
+        camera.updateMatrixWorld();
+      }
+      const grow = mode === 'true' && minPlanetPixels > 0 && height > 0;
+      pieces.bodies.forEach((b, i) => {
         if (grow) {
           const dist = camera.position.distanceTo(b.mesh.position);
           const ppu = height / (2 * tanHalfFov() * dist);
@@ -319,7 +489,7 @@ export function createStarSystem(
         }
       }
       if (destroyed) return; // a callback may have destroyed the view
-      renderNow(true);
+      renderNow(!following);
     };
     rafId = requestAnimationFrame(frame);
 
@@ -339,6 +509,9 @@ export function createStarSystem(
       get scaleMode() {
         return mode;
       },
+      get following() {
+        return followed;
+      },
       play() {
         if (!destroyed) playing = true;
       },
@@ -356,7 +529,8 @@ export function createStarSystem(
         mode = m;
         pieces.applyScale(mode);
         applyFit();
-        setView('home');
+        if (followed !== null) lockOn(followed);
+        else setView('home');
       },
       setHabitableZoneVisible(v) {
         if (destroyed) return;
@@ -364,10 +538,14 @@ export function createStarSystem(
         pieces.setHabitableZoneVisible(v);
       },
       setView(kind) {
-        if (!destroyed && (kind === 'home' || kind === 'transit')) setView(kind);
+        if (destroyed || (kind !== 'home' && kind !== 'transit')) return;
+        unfollow();
+        setView(kind);
       },
       resetView() {
-        if (!destroyed) setView('home');
+        if (destroyed) return;
+        unfollow();
+        setView('home');
       },
       setSystem(next) {
         if (destroyed) return;
@@ -378,15 +556,35 @@ export function createStarSystem(
         system = derived;
         pieces = nextPieces;
         scene.add(pieces.root);
-        labels = createLabels(wrapper, system.planets, { enabled: overlayState.labels });
+        labels = makeLabels();
         syncLabelPositions();
-        if (applyFit()) setView('home');
+        const refit = applyFit();
+        if (followed !== null && followed < pieces.bodies.length) {
+          labels.setFollowed(followed);
+          lockOn(followed);
+        } else {
+          unfollow();
+          if (refit) setView('home');
+        }
       },
       setOverlays(next) {
         if (destroyed || !next) return;
         overlayState = mergeOverlays(overlayState, next);
         labels.setEnabled(overlayState.labels);
         overlays.setConfig(overlayState);
+      },
+      follow(i) {
+        if (!destroyed) follow(i);
+      },
+      unfollow() {
+        if (!destroyed) unfollow();
+      },
+      onFollowChange(cb) {
+        if (destroyed) return () => {};
+        followChanges.add(cb);
+        return () => {
+          followChanges.delete(cb);
+        };
       },
       onTick(cb) {
         if (destroyed) return () => {};
@@ -402,6 +600,11 @@ export function createStarSystem(
         if (observer) observer.disconnect();
         else window.removeEventListener('resize', resize);
         ticks.clear();
+        followChanges.clear();
+        followed = null;
+        window.removeEventListener('keydown', onKey);
+        removePointer();
+        unlockButton?.dispose();
         controls.dispose();
         pieces.dispose();
         starfield?.dispose();
