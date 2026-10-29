@@ -20,7 +20,7 @@ export interface StarPiece {
   mesh: Mesh;
   glow: Sprite;
   light: PointLight;
-  ambient: AmbientLight;
+  ambient: AmbientLight | null;
   dispose(): void;
 }
 
@@ -29,8 +29,11 @@ const VERTEX =
 const FRAGMENT =
   'uniform vec3 color;varying vec3 vN;varying vec3 vP;void main(){float mu=clamp(dot(normalize(vN),normalize(-vP)),0.0,1.0);float I=1.0-0.65*(1.0-mu);gl_FragColor=vec4(color*I*1.25,1.0);}';
 
-/** Builds the limb-darkened star with glow and lighting. `colour` is linear RGB 0..1. */
-export function createStar(colour: [number, number, number]): StarPiece {
+/**
+ * Builds the limb-darkened star with glow and lighting. `colour` is linear RGB 0..1.
+ * Only one star of a scene should carry the ambient light.
+ */
+export function createStar(colour: [number, number, number], withAmbient = true): StarPiece {
   const starCol = new Color(colour[0], colour[1], colour[2]);
   const material = new ShaderMaterial({
     uniforms: { color: { value: starCol } },
@@ -51,10 +54,11 @@ export function createStar(colour: [number, number, number]): StarPiece {
   const glow = new Sprite(glowMaterial);
 
   const light = new PointLight(starCol, RENDER_TUNABLES.starLightIntensity, 0, RENDER_TUNABLES.starLightDecay);
-  const ambient = new AmbientLight(0x1a2038, RENDER_TUNABLES.ambientIntensity);
+  const ambient = withAmbient ? new AmbientLight(0x1a2038, RENDER_TUNABLES.ambientIntensity) : null;
 
   const object = new Group();
-  object.add(mesh, glow, light, ambient);
+  object.add(mesh, glow, light);
+  if (ambient) object.add(ambient);
   return {
     object,
     mesh,

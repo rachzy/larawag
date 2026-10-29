@@ -101,4 +101,18 @@ export const PRESETS: Preset[] = [
       ],
     },
   },
+  {
+    id: 'kepler-16',
+    label: 'Kepler-16 (two stars, one circumbinary planet)',
+    rateSlider: 1,
+    // Doyle et al. 2011. Drawn as a simple prototype: the planet orbits both stars as if they were one.
+    input: {
+      stars: [
+        { name: 'Kepler-16 A', teff: 4450, radius: 0.649, mass: 0.69 },
+        { name: 'Kepler-16 B', teff: 3300, radius: 0.226, mass: 0.203 },
+      ],
+      binary: { separation: 0.224 },
+      planets: [{ name: 'b', period: 228.8, radius: 8.45, phase: 1.2 }],
+    },
+  },
 ];

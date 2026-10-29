@@ -289,6 +289,7 @@ export function createStarSystem(
       const dt = Math.min(0.1, Math.max(0, (now - last) / 1000));
       last = now;
       if (playing) simDays += dt * rate;
+      pieces.setTime(simDays);
       const grow = mode === 'true' && minPlanetPixels > 0 && height > 0;
       pieces.bodies.forEach((b, i) => {
         const th = planetAngle(b.planet.phase, b.planet.periodDays, simDays);

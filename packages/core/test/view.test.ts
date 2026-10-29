@@ -498,6 +498,24 @@ describe('createStarSystem with a renderer', () => {
     expect(planetTexture).toHaveBeenCalledTimes(3);
   });
 
+  it('runs two stars and moves them with the clock', () => {
+    const v = make({
+      stars: [
+        { teff: 5800, radius: 1.1, mass: 1.1 },
+        { teff: 4400, radius: 0.7, mass: 0.7 },
+      ],
+      binary: { separation: 0.2 },
+      planets: fixture.planets,
+    });
+    expect(v.system.stars).toHaveLength(2);
+    v.setTime(0);
+    step(16);
+    expect(() => step(16)).not.toThrow();
+    v.setSystem(fixture);
+    expect(v.system.binary).toBeNull();
+    expect(() => step(16)).not.toThrow();
+  });
+
   it('setOverlays merges into the current config', () => {
     const v = make();
     v.setOverlays({ badge: { text: 'Hypothetisch' } });

@@ -67,8 +67,26 @@ export interface PlanetInput {
 
 /** A star and its planets (possibly none). */
 export interface SystemInput {
-  star: StarInput;
+  /** The star. Give this or `stars`. */
+  star?: StarInput;
+  /**
+   * Two stars, drawn circling each other and treated as one combined star for the planets
+   * (summed mass and luminosity). Give this or `star`.
+   */
+  stars?: [StarInput, StarInput];
+  /** Only with `stars`. */
+  binary?: BinaryInput;
   planets: PlanetInput[];
+}
+
+/** The two stars' own circular orbit. */
+export interface BinaryInput {
+  /** Distance between the stars in AU. Default 4 × the summed radii. */
+  separation?: number;
+  /** Starting angle in radians, default 0. */
+  phase?: number;
+  /** Override: habitable zone edges in AU, around the pair. */
+  habitableZone?: { inner: number; outer: number };
 }
 
 /** One validation problem, located by `path`. */

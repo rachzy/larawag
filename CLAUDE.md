@@ -4,12 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 # Larawag
 
-Framework-agnostic three.js library that renders a hypothetical single-star planetary system (one star plus a list of planets, given as numbers) as an interactive 3D scene in a host-provided element. pnpm workspaces monorepo, TypeScript compiled with plain `tsc`.
+Framework-agnostic three.js library that renders a hypothetical planetary system (one star, or two drawn as a binary, plus a list of planets, given as numbers) as an interactive 3D scene in a host-provided element. pnpm workspaces monorepo, TypeScript compiled with plain `tsc`.
 
 The library (`packages/core`), the demo (`examples/vanilla`) and the visual harness (`tools/visual`) exist; design notes and plans live in the git-ignored `tmp/plans/`.
 
 - The visual spec is the "Star System Preview" prototype (single HTML page, three r128 UMD). With `planetStyle: 'prototype'` the library must reproduce its canvas without visible change; the default `'inferred'` style changes only planet colours (decided by Henrique, 2026-10-28). Planets, scale modes, camera presets and the starfield are defined by that page and the kickoff prompt; do not restyle the 3D scene.
-- Single-star systems only. Circular, coplanar orbits. No moons, binaries, planet picking or framework wrappers in v1.
+- One or two stars. Two stars are a simple prototype: the planets orbit them as one combined star (Holman & Wiegert orbits are a TO-DO). Circular, coplanar orbits. No moons, planet picking or framework wrappers.
 - Everything drawn is hypothetical; never imply known composition or surface. Planet class is a guess from radius and planet colours a guess from class and Teq (`src/physics/appearance.ts`), and the docs say so.
 
 ## Workspace layout

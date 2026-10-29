@@ -1,6 +1,6 @@
 import { planetAppearance, type PlanetAppearance } from './appearance.js';
 import { deriveRings, type DerivedRings } from './rings.js';
-import { DEFAULT_ALBEDO } from './constants.js';
+import { AU_PER_RSUN, DEFAULT_ALBEDO, TEFF_SUN } from './constants.js';
 import { blackbodyColour, colourToCss, parseHexColour } from './colour.js';
 import { classifyPlanet } from './classify.js';
 import { habitableZone } from './habitable-zone.js';
@@ -14,7 +14,7 @@ import {
   starLuminosity,
 } from './kepler.js';
 import { parseSpectralType, spectralProperties } from './spectral.js';
-import type { PlanetClass, StarInput, SystemInput } from './types.js';
+import type { BinaryInput, PlanetClass, StarInput, SystemInput } from './types.js';
 import { LarawagValidationError, validateSystem } from './validate.js';
 
 /** A planet with every quantity the renderer and labels need. */
@@ -43,20 +43,42 @@ export interface DerivedPlanet {
   seed: number;
 }
 
-/** A star, its habitable zone and its derived planets. */
+/** A star with its derived luminosity and colour. */
+export interface DerivedStar {
+  name: string;
+  /** As given, or null. */
+  spectralType: string | null;
+  teff: number;
+  radius: number;
+  mass: number;
+  luminosity: number;
+  /** Linear RGB, channels 0..1. */
+  colour: [number, number, number];
+  colourCss: string;
+}
+
+/** The two stars' circular orbit around their centre of mass. */
+export interface DerivedBinary {
+  /** AU. */
+  separation: number;
+  periodDays: number;
+  /** Each star's distance from the centre of mass, AU. */
+  distances: [number, number];
+  /** Radians. */
+  phase: number;
+}
+
+/** A star (or two), the habitable zone and the derived planets. */
 export interface DerivedSystem {
-  star: {
-    name: string;
-    /** As given, or null. */
-    spectralType: string | null;
-    teff: number;
-    radius: number;
-    mass: number;
-    luminosity: number;
-    /** Linear RGB, channels 0..1. */
-    colour: [number, number, number];
-    colourCss: string;
-  };
+  /**
+   * The star the planets orbit. With two stars, the pair as one: summed mass and luminosity,
+   * star A's radius, and the Teff that gives that luminosity.
+   */
+  star: DerivedStar;
+  /** Every star as drawn: one, or two. */
+  stars: DerivedStar[];
+  /** The two stars' orbit, or null for one star. */
+  binary: DerivedBinary | null;
   habitableZone: { inner: number; outer: number };
   planets: DerivedPlanet[];
 }
@@ -84,11 +106,10 @@ export function deriveSystem(input: SystemInput): DerivedSystem {
   const issues = validateSystem(input);
   if (issues.length) throw new LarawagValidationError(issues);
 
-  const given = input.star;
-  const s = { ...given, ...resolveStar(given) };
-  const luminosity = s.luminosity ?? starLuminosity(s.teff, s.radius);
-  const colour = (s.colour === undefined ? null : parseHexColour(s.colour)) ?? blackbodyColour(s.teff);
-
+  const given = input.stars ?? [input.star!];
+  const stars = given.map((g, i) => deriveStar(g, given.length > 1 ? `Star ${'AB'[i]}` : 'Star'));
+  const s = stars.length === 1 ? stars[0]! : combineStars(stars);
+  const luminosity = s.luminosity;
   const planets = input.planets.map((p, i): DerivedPlanet => {
     const aAu = p.a ?? semiMajorAxisAu(s.mass, p.period as number);
     const periodDays = p.period ?? periodDaysFromAu(s.mass, aAu);
@@ -115,18 +136,57 @@ export function deriveSystem(input: SystemInput): DerivedSystem {
     };
   });
 
+  const hzOverride = input.stars ? input.binary?.habitableZone : input.star!.habitableZone;
   return {
-    star: {
-      name: s.name ?? 'Star',
-      spectralType: s.spectralType ?? null,
-      teff: s.teff,
-      radius: s.radius,
-      mass: s.mass,
-      luminosity,
-      colour,
-      colourCss: colourToCss(colour),
-    },
-    habitableZone: s.habitableZone ?? habitableZone(s),
+    star: s,
+    stars,
+    binary: input.stars ? deriveBinary(stars, input.binary ?? {}) : null,
+    habitableZone: hzOverride ?? habitableZone(s),
     planets,
+  };
+}
+
+function deriveStar(g: StarInput, defaultName: string): DerivedStar {
+  const { teff, radius, mass } = resolveStar(g);
+  const colour = (g.colour === undefined ? null : parseHexColour(g.colour)) ?? blackbodyColour(teff);
+  return {
+    name: g.name ?? defaultName,
+    spectralType: g.spectralType ?? null,
+    teff,
+    radius,
+    mass,
+    luminosity: g.luminosity ?? starLuminosity(teff, radius),
+    colour,
+    colourCss: colourToCss(colour),
+  };
+}
+
+/** Two stars as one, for the planets: summed mass and light, the first star's radius. */
+function combineStars(stars: DerivedStar[]): DerivedStar {
+  const radius = stars[0]!.radius;
+  const luminosity = stars.reduce((t, x) => t + x.luminosity, 0);
+  const teff = TEFF_SUN * Math.pow(luminosity / (radius * radius), 0.25);
+  const colour = blackbodyColour(teff);
+  return {
+    name: stars.map((x) => x.name).join(' + '),
+    spectralType: null,
+    teff,
+    radius,
+    mass: stars.reduce((t, x) => t + x.mass, 0),
+    luminosity,
+    colour,
+    colourCss: colourToCss(colour),
+  };
+}
+
+function deriveBinary(stars: DerivedStar[], b: BinaryInput): DerivedBinary {
+  const [a, c] = stars as [DerivedStar, DerivedStar];
+  const total = a.mass + c.mass;
+  const separation = b.separation ?? (4 * (a.radius + c.radius)) / AU_PER_RSUN;
+  return {
+    separation,
+    periodDays: periodDaysFromAu(total, separation),
+    distances: [(separation * c.mass) / total, (separation * a.mass) / total],
+    phase: b.phase ?? 0,
   };
 }

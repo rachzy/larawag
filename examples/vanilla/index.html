@@ -94,6 +94,17 @@ dt{color:var(--muted)} dd{margin:0;font-family:var(--mono);font-size:12.5px;text
       </div>
     </fieldset>
     <fieldset style="margin-top:12px">
+      <legend>Second star (optional)</legend>
+      <div class="row">
+        <label>Name <input id="star2-name" type="text"></label>
+        <label>Spectral type <input id="star2-spectral" type="text" placeholder="e.g. M3V"></label>
+        <label>Teff (K) <input id="star2-teff" type="number" step="any" inputmode="decimal"></label>
+        <label>Radius (R☉) <input id="star2-radius" type="number" step="any" inputmode="decimal"></label>
+        <label>Mass (M☉) <input id="star2-mass" type="number" step="any" inputmode="decimal"></label>
+        <label>Separation (AU) <input id="star2-separation" type="number" step="any" inputmode="decimal" placeholder="auto"></label>
+      </div>
+    </fieldset>
+    <fieldset style="margin-top:12px">
       <legend>Planets</legend>
       <div id="planets"></div>
       <div class="actions"><button id="add" type="button">Add planet</button></div>
