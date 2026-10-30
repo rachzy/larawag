@@ -2,10 +2,15 @@
   "name": "larawag-workspace",
   "private": true,
   "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=24.15.0",
+    "npm": ">=11.5.1",
+    "pnpm": ">=10.28.0"
+  },
   "scripts": {
     "dev": "pnpm --filter vanilla dev",
     "dev:react": "pnpm --filter react-demo dev",
-    "dev:angular": "pnpm --filter angular-demo dev",
+    "dev:angular": "pnpm --filter @larawag/core --filter @larawag/angular build && pnpm --filter angular-demo dev",
     "build": "pnpm -r build",
     "test": "pnpm -r test",
     "test:visual": "pnpm --filter @larawag/visual compare && pnpm --filter @larawag/visual lifecycle && pnpm --filter @larawag/visual react && pnpm --filter @larawag/visual angular",

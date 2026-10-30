@@ -389,9 +389,11 @@ pnpm dev:react    # same as pnpm --filter react-demo dev
 pnpm dev:angular  # same as pnpm --filter angular-demo dev
 ```
 
-The Angular package and demo build with the Angular CLI, which needs Node.js 22.22.3 or later (or 24.15+), and use TypeScript 6.0 in their own folders, since Angular 22 does not support TypeScript 7 yet. The demo uses the built `@larawag/angular`, so run `pnpm -r build` (or `pnpm --filter @larawag/angular build`) first.
+The Angular package and demo use TypeScript 6.0 in their own folders, since Angular 22 does not support TypeScript 7 yet. The demo uses the built `@larawag/angular`, so `pnpm dev:angular` builds core and the Angular package before starting.
 
 ## Development
+
+The workspace needs Node.js 24.15 or later (with its npm 11) and pnpm 10.28 or later; `.nvmrc` pins Node 24, and `pnpm install` stops with an error on an older Node.
 
 ```sh
 pnpm -r build
