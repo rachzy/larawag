@@ -1,5 +1,13 @@
 # @larawag/react
 
+## 0.1.2
+
+### Patch Changes
+
+- [#15](https://github.com/rachzy/larawag/pull/15) [`2f79383`](https://github.com/rachzy/larawag/commit/2f7938365940f5b3de020738cb738b9c53d037d4) Thanks [@rachzy](https://github.com/rachzy)! - README: React usage examples written as typed arrow-function components, plus a `useStarSystem` example.
+- Updated dependencies []:
+  - @larawag/core@0.1.2
+
 ## 0.1.1
 
 ### Patch Changes
