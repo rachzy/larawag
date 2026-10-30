@@ -389,7 +389,7 @@ pnpm dev:react    # same as pnpm --filter react-demo dev
 pnpm dev:angular  # same as pnpm --filter angular-demo dev
 ```
 
-The Angular package and demo use TypeScript 6.0 in their own folders, since Angular 22 does not support TypeScript 7 yet. The demo uses the built `@larawag/angular`, so `pnpm dev:angular` builds core and the Angular package before starting.
+The Angular package and demo use TypeScript 6.0 in their own folders, since Angular 22 does not support TypeScript 7 yet. The demo uses the built `@larawag/angular`, so its `dev` script (`pnpm dev:angular` from the root) builds core and the Angular package before starting.
 
 ## Development
 
