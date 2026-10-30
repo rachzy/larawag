@@ -390,7 +390,7 @@ The host element is `display: block; width: 100%; height: 100%`, so size its par
 
 ## Examples
 
-`examples/vanilla` is a plain HTML demo with a system picker (the example K dwarf, the Solar System with its planet presets, axial tilts and Saturn's rings, TRAPPIST-1 given only by its spectral type, a B5V blue dwarf and a K5III red giant) and a form to edit the star and planets.
+`examples/vanilla` is a plain HTML demo with a system picker (the example K dwarf, the Solar System with its planet presets, axial tilts and Saturn's rings, TRAPPIST-1 given only by its spectral type, a B5V blue dwarf and a K5III red giant) and a form to edit the star and planets. It is published at https://larawag.rachzy.dev/ from `main`.
 
 ```sh
 pnpm install
