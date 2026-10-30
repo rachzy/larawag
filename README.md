@@ -31,8 +31,23 @@ Everything drawn is hypothetical. The library picks a plausible look from a few 
 ### Vanilla
 
 For the vanilla (simple browser usage) installation:
+
+npm:
+
 ```sh
-pnpm add @larawag/core three
+npm install @larawag/core three@0.186
+```
+
+Yarn:
+
+```sh
+yarn add @larawag/core three@0.186
+```
+
+pnpm:
+
+```sh
+pnpm add @larawag/core three@0.186
 ```
 
 ### Framework integrations
@@ -281,8 +296,22 @@ Larawag does not load fonts.
 
 `@larawag/react` wraps the same view in a component for React 19.
 
+npm:
+
 ```sh
-pnpm add @larawag/react @larawag/core three
+npm install @larawag/react @larawag/core three@0.186
+```
+
+Yarn:
+
+```sh
+yarn add @larawag/react @larawag/core three@0.186
+```
+
+pnpm:
+
+```sh
+pnpm add @larawag/react @larawag/core three@0.186
 ```
 
 ```tsx
@@ -332,8 +361,22 @@ Avoid setting React state from `onTick` on every frame; the clock overlay alread
 
 `@larawag/angular` wraps the same view in a standalone component for Angular 22, written for zoneless apps.
 
+npm:
+
 ```sh
-pnpm add @larawag/angular @larawag/core three
+npm install @larawag/angular @larawag/core three@0.186
+```
+
+Yarn:
+
+```sh
+yarn add @larawag/angular @larawag/core three@0.186
+```
+
+pnpm:
+
+```sh
+pnpm add @larawag/angular @larawag/core three@0.186
 ```
 
 ```ts

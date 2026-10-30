@@ -8,11 +8,25 @@ Everything drawn is hypothetical. The library picks a plausible look from a few 
 
 ## Install
 
+npm:
+
 ```sh
-pnpm add @larawag/core
+npm install @larawag/core three@0.186
 ```
 
-`three` is a peer dependency (`>=0.186.0 <0.187.0`), so your app and Larawag share a single copy. npm 7+ and pnpm 8+ install it automatically if it is missing; with Yarn or older package managers, add `three` yourself.
+Yarn:
+
+```sh
+yarn add @larawag/core three@0.186
+```
+
+pnpm:
+
+```sh
+pnpm add @larawag/core three@0.186
+```
+
+`three` is a peer dependency (`>=0.186.0 <0.187.0`), so your app and Larawag share a single copy. The commands above install it explicitly, since Yarn and older package managers do not add peer dependencies on their own.
 
 ## Usage
 

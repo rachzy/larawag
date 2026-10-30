@@ -6,8 +6,22 @@ React 19 bindings for [`@larawag/core`](https://www.npmjs.com/package/@larawag/c
 
 ## Install
 
+npm:
+
 ```sh
-pnpm add @larawag/react @larawag/core three
+npm install @larawag/react @larawag/core three@0.186
+```
+
+Yarn:
+
+```sh
+yarn add @larawag/react @larawag/core three@0.186
+```
+
+pnpm:
+
+```sh
+pnpm add @larawag/react @larawag/core three@0.186
 ```
 
 `@larawag/core`, `react` (19) and `three` (`>=0.186.0 <0.187.0`) are peer dependencies.
