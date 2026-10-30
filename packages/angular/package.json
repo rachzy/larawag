@@ -1,6 +1,6 @@
 {
   "name": "@larawag/angular",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Angular 22 standalone component for @larawag/core, the three.js view of a hypothetical planetary system.",
   "keywords": [
     "angular",

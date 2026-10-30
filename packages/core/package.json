@@ -1,6 +1,6 @@
 {
   "name": "@larawag/core",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Framework-agnostic three.js view of a hypothetical single-star planetary system, drawn from a few numbers.",
   "keywords": [
     "three",
