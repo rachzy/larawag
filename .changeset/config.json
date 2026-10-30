@@ -2,7 +2,7 @@
   "$schema": "https://unpkg.com/@changesets/config@4.0.1/schema.json",
   "changelog": ["@changesets/changelog-github", { "repo": "rachzy/larawag" }],
   "commit": false,
-  "fixed": [["@larawag/core", "@larawag/react"]],
+  "fixed": [["@larawag/core", "@larawag/react", "@larawag/angular"]],
   "linked": [],
   "access": "public",
   "baseBranch": "main",

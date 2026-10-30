@@ -38,6 +38,7 @@ pnpm add @larawag/core three
 ### Framework integrations
 
 - [React](#react)
+- [Angular](#angular)
 
 ## Usage
 
@@ -327,6 +328,66 @@ const Stage = ({ system }: { system: SystemInput }) => {
 
 Avoid setting React state from `onTick` on every frame; the clock overlay already shows the time.
 
+### Angular
+
+`@larawag/angular` wraps the same view in a standalone component for Angular 22, written for zoneless apps.
+
+```sh
+pnpm add @larawag/angular @larawag/core three
+```
+
+```ts
+import { Component, input, viewChild } from '@angular/core';
+import { StarSystemComponent } from '@larawag/angular';
+import type { SystemInput } from '@larawag/core';
+
+@Component({
+  selector: 'app-preview',
+  imports: [StarSystemComponent],
+  template: `
+    <div style="height: 480px">
+      <larawag-star-system [system]="system()" scaleMode="compressed" (error)="warn($event)" />
+    </div>
+    <button (click)="view()?.setView('transit')">Transit view</button>
+  `,
+})
+export class Preview {
+  readonly system = input.required<SystemInput>();
+  readonly view = viewChild(StarSystemComponent);
+
+  warn(error: unknown) {
+    console.warn(error);
+  }
+}
+```
+
+Inputs can also drive the view directly. Here a signal bound to `[playing]` plays and pauses it, with no reference to the component:
+
+```ts
+import { Component, input, signal } from '@angular/core';
+import { StarSystemComponent } from '@larawag/angular';
+import type { SystemInput } from '@larawag/core';
+
+@Component({
+  selector: 'app-stage',
+  imports: [StarSystemComponent],
+  template: `
+    <div style="height: 480px">
+      <larawag-star-system [system]="system()" scaleMode="true" [playing]="playing()" />
+    </div>
+    <button (click)="playing.set(!playing())">{{ playing() ? 'Pause' : 'Play' }}</button>
+  `,
+})
+export class Stage {
+  readonly system = input.required<SystemInput>();
+  readonly playing = signal(true);
+}
+```
+
+The inputs, outputs and methods match the React props: `system` (compared by value), `scaleMode`, `showHabitableZone`, `rate`, `overlays` and `playing` call the view's methods when they change; `autoplay`, `minPlanetPixels`, `planetStyle`, `followOnClick` and `fallbackText` rebuild the view; `(tick)`, `(error)` and `(followChange)` are outputs; the component has `play()`, `pause()`, `setTime()`, `setView()`, `resetView()`, `follow()`, `unfollow()` and a `view` signal with the live view.
+
+The host element is `display: block; width: 100%; height: 100%`, so size its parent. The view is created after the first render (nothing runs on the server) and destroyed with the component. The render loop runs outside Angular's zone, so apps that still use zone.js do not run change detection every frame; `(tick)` and `(followChange)` are emitted there too. Bind `(tick)` only when you need it, since each emit with a listener schedules change detection in a zoneless app.
+
 ## Examples
 
 `examples/vanilla` is a plain HTML demo with a system picker (the example K dwarf, the Solar System with its planet presets, axial tilts and Saturn's rings, TRAPPIST-1 given only by its spectral type, a B5V blue dwarf and a K5III red giant) and a form to edit the star and planets.
@@ -342,7 +403,17 @@ pnpm dev          # same as pnpm --filter vanilla dev
 pnpm dev:react    # same as pnpm --filter react-demo dev
 ```
 
+`examples/angular` does the same through `<larawag-star-system>`, as a zoneless Angular 22 app:
+
+```sh
+pnpm dev:angular  # same as pnpm --filter angular-demo dev
+```
+
+The Angular package and demo use TypeScript 6.0 in their own folders, since Angular 22 does not support TypeScript 7 yet. The demo uses the built `@larawag/angular`, so its `dev` script (`pnpm dev:angular` from the root) builds core and the Angular package before starting.
+
 ## Development
+
+The workspace needs Node.js 24.15 or later (with its npm 11) and pnpm 10.28 or later; `.nvmrc` pins Node 24, and `pnpm install` stops with an error on an older Node.
 
 ```sh
 pnpm -r build
@@ -351,7 +422,7 @@ pnpm --filter @larawag/core test <name>   # one test file
 pnpm test:visual                          # screenshots against the original prototype
 ```
 
-`pnpm test:visual` needs Playwright's Chromium. It compares the library's canvas with the original three r128 page in home view, transit view and true scale, and checks that the view and the React wrapper free every GPU object, frame callback and overlay.
+`pnpm test:visual` needs Playwright's Chromium. It compares the library's canvas with the original three r128 page in home view, transit view and true scale, and checks that the view and the React and Angular wrappers free every GPU object, frame callback and overlay. The Angular suite uses the built package, so build it first.
 
 Run `pnpm --filter @larawag/visual exec playwright install chromium` once before the first `pnpm test:visual`. To use another Chromium build, set `LARAWAG_CHROMIUM` to its executable path.
 
@@ -399,7 +470,6 @@ In `pnpm test:visual` (SwiftShader, with `planetStyle: 'prototype'`), the librar
 - Moons.
 - Eccentric and inclined orbits.
 - Habitable zone from the Kopparapu et al. 2013 model, once its coefficients are checked against the paper.
-- Angular wrapper (`@larawag/angular`).
 - Shadow DOM support.
 - Publish to npm.
 

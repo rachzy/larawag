@@ -6,9 +6,15 @@
   "scripts": {
     "compare": "vitest run --config vitest.config.ts compare.spec.ts",
     "lifecycle": "vitest run --config vitest.config.ts lifecycle.spec.ts",
-    "react": "vitest run --config vitest.config.ts react.spec.ts"
+    "react": "vitest run --config vitest.config.ts react.spec.ts",
+    "angular": "vitest run --config vitest.config.ts angular.spec.ts"
   },
   "devDependencies": {
+    "@angular/common": "22.2.3",
+    "@angular/compiler": "22.2.3",
+    "@angular/core": "22.2.3",
+    "@angular/platform-browser": "22.2.3",
+    "@larawag/angular": "workspace:*",
     "@larawag/core": "workspace:*",
     "@larawag/react": "workspace:*",
     "pixelmatch": "^7.1.0",
@@ -16,6 +22,7 @@
     "pngjs": "^7.0.0",
     "react": "19.3.1",
     "react-dom": "19.3.1",
+    "rxjs": "7.8.2",
     "three": "0.186.1",
     "three-r128": "npm:three@0.128.0",
     "vite": "^8.3.5",
