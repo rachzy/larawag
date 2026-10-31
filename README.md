@@ -509,12 +509,12 @@ In `pnpm test:visual` (SwiftShader, with `planetStyle: 'prototype'`), the librar
 
 ## TO-DO
 
-- More than one star in a system.
+- Binary systems: draw two stars circling their centre of mass, then implement Holman & Wiegert accurate orbits for the planets.
 - Moons.
 - Eccentric and inclined orbits.
 - Habitable zone from the Kopparapu et al. 2013 model, once its coefficients are checked against the paper.
 - Shadow DOM support.
-- Publish to npm.
+- Giant and white-dwarf spectral types (only the main-sequence table is used today).
 
 ## Licence
 
