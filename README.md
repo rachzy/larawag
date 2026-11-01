@@ -9,6 +9,8 @@ Everything drawn is hypothetical. The library picks a plausible look from a few 
 
 **Notes:** This lib was originally created for serving as a 3D engine for rendering hypothetical stellar systems with exoplanet candidates for the [Antares](https://github.com/rachzy/antares) project. **It's NOT 100% stable and was completely vibe-coded.**
 
+![larawag — interactive 3D star systems drawn from a few numbers](https://github.com/yasirwhite/OpenDemo/releases/download/showcase-media/larawag-demo.gif)
+
 ## Preview
 
 ### Solar System
